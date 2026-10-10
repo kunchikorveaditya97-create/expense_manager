@@ -63,7 +63,7 @@ class RecentTransactionsCard extends StatelessWidget {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
-                        backgroundColor: color.withOpacity(0.12),
+                        backgroundColor: color.withValues(alpha: 0.12),
                         child: Icon(
                           isExpense
                               ? Icons.arrow_upward_rounded

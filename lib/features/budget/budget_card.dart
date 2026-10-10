@@ -118,7 +118,7 @@ class MonthlyBudgetCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: budgetProvider.progressRatio,
                   minHeight: 12,
-                  backgroundColor: statusColor.withOpacity(0.15),
+                  backgroundColor: statusColor.withValues(alpha: 0.15),
                   valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
               ),
@@ -152,9 +152,9 @@ class MonthlyBudgetCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withOpacity(0.4)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     children: [

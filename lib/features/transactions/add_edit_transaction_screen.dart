@@ -240,7 +240,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                   ? _categories
                   : [..._categories, _selectedCategory];
               return DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Category',
                   border: OutlineInputBorder(),
@@ -257,7 +257,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
             Builder(builder: (context) {
               final accounts = context.watch<TransactionProvider>().accounts;
               return DropdownButtonFormField<String>(
-                value: _resolveAccountId(accounts),
+                initialValue: _resolveAccountId(accounts),
                 decoration: const InputDecoration(
                   labelText: 'Account',
                   border: OutlineInputBorder(),
@@ -317,7 +317,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
               ),
               if (_isRecurring)
                 DropdownButtonFormField<String>(
-                  value: _frequency,
+                  initialValue: _frequency,
                   decoration: const InputDecoration(
                     labelText: 'Repeats',
                     border: OutlineInputBorder(),

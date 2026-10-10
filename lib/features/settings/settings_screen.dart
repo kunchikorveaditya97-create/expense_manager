@@ -304,7 +304,7 @@ class SettingsScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: selectedMonth,
+                initialValue: selectedMonth,
                 decoration: const InputDecoration(labelText: 'Month'),
                 items: List.generate(
                   12,
@@ -314,7 +314,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: selectedYear,
+                initialValue: selectedYear,
                 decoration: const InputDecoration(labelText: 'Year'),
                 items: [2025, 2026, 2027]
                     .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
@@ -323,7 +323,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<TransactionType?>(
-                value: selectedType,
+                initialValue: selectedType,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: const [
                   DropdownMenuItem(value: null, child: Text('All Types')),

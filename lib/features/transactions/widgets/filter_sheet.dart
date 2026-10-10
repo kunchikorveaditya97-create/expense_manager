@@ -107,7 +107,7 @@ class _FilterSheetState extends State<FilterSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<TransactionType?>(
-            value: _type,
+            initialValue: _type,
             decoration: const InputDecoration(
                 labelText: 'Type', border: OutlineInputBorder()),
             items: const [
@@ -121,7 +121,7 @@ class _FilterSheetState extends State<FilterSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
-            value: _category,
+            initialValue: _category,
             decoration: const InputDecoration(
                 labelText: 'Category', border: OutlineInputBorder()),
             items: [
@@ -133,7 +133,7 @@ class _FilterSheetState extends State<FilterSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
-            value: _account,
+            initialValue: _account,
             decoration: const InputDecoration(
                 labelText: 'Account', border: OutlineInputBorder()),
             items: [

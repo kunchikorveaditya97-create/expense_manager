@@ -127,8 +127,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState s) {
-    if (s == AppLifecycleState.resumed) syncAll();
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) syncAll();
   }
 
   // --------------------------------------------------------------- sync ---

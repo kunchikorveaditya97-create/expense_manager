@@ -160,7 +160,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         CircleAvatar(
           radius: 18,
-          backgroundColor: color.withOpacity(0.12),
+          backgroundColor: color.withValues(alpha: 0.12),
           child: Icon(icon, size: 20, color: color),
         ),
         const SizedBox(width: 10),

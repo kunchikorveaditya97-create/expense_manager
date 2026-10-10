@@ -125,7 +125,7 @@ class ManageAccountsScreen extends StatelessWidget {
               if (existing == null) ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: type,
+                  initialValue: type,
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: _accountTypes.entries
                       .map((e) =>
