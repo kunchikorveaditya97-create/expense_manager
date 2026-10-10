@@ -185,6 +185,10 @@ class AppDatabase extends _$AppDatabase {
     return row.read(countExp) ?? 0;
   }
 
+  Future<List<Account>> getAllAccounts() {
+    return (select(accounts)..where((a) => a.deletedAt.isNull())).get();
+  }
+
   Future<List<Transaction>> getPendingTransactions() {
     return (select(transactions)
       ..where((t) => t.syncStatus.equalsValue(SyncStatus.synced).not()))

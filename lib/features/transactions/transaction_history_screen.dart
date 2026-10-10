@@ -143,7 +143,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: Text(
-                '${item.accountId} • ${DateFormat.yMMMd().format(item.transactionDate)}',
+                '${context.watch<TransactionProvider>().accountName(item.accountId)} • ${DateFormat.yMMMd().format(item.transactionDate)}',
               ),
               trailing: Text(
                 '${isExpense ? '-' : '+'}${currency.format(item.amount)}',

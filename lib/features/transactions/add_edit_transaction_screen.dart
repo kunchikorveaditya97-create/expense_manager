@@ -24,7 +24,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
 
   late TransactionType _selectedType;
   late String _selectedCategory;
-  late String _selectedAccount;
+  String? _selectedAccount;
   late DateTime _selectedDate;
   bool _isSubmitting = false;
 
@@ -37,7 +37,6 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     'Investment',
     'Other'
   ];
-  final List<String> _accounts = ['Cash', 'Bank Account', 'Credit Card', 'UPI'];
 
   @override
   void initState() {
@@ -45,7 +44,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     final txn = widget.transaction;
     _selectedType = txn?.type ?? TransactionType.expense;
     _selectedCategory = txn?.categoryId ?? _categories.first;
-    _selectedAccount = txn?.accountId ?? _accounts.first;
+    _selectedAccount = txn?.accountId;
     _selectedDate = txn?.transactionDate ?? DateTime.now();
 
     _amountController = TextEditingController(
@@ -59,6 +58,14 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  String? _resolveAccountId(List<Account> accounts) {
+    if (accounts.isEmpty) return null;
+    for (final a in accounts) {
+      if (a.id == _selectedAccount || a.name == _selectedAccount) return a.id;
+    }
+    return accounts.first.id;
   }
 
   Future<void> _pickDate() async {
@@ -91,13 +98,18 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
       final isEditing = widget.transaction != null;
       final provider = context.read<TransactionProvider>();
 
+      final accountId = _resolveAccountId(provider.accounts);
+      if (accountId == null) {
+        throw Exception('No account available');
+      }
+
       if (isEditing) {
         await provider.updateTransaction(
           id: widget.transaction!.id,
           amount: enteredAmount,
           type: _selectedType,
           categoryId: _selectedCategory,
-          accountId: _selectedAccount,
+          accountId: accountId,
           note: trimmedNote,
           transactionDate: _selectedDate,
         );
@@ -107,7 +119,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
           amount: enteredAmount,
           type: _selectedType,
           categoryId: _selectedCategory,
-          accountId: _selectedAccount,
+          accountId: accountId,
           note: trimmedNote,
           transactionDate: _selectedDate,
         );
@@ -204,21 +216,22 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
               },
             ),
             const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              value: _accounts.contains(_selectedAccount)
-                  ? _selectedAccount
-                  : _accounts.first,
-              decoration: const InputDecoration(
-                labelText: 'Account',
-                border: OutlineInputBorder(),
-              ),
-              items: _accounts.map((acc) {
-                return DropdownMenuItem(value: acc, child: Text(acc));
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedAccount = val);
-              },
-            ),
+            Builder(builder: (context) {
+              final accounts = context.watch<TransactionProvider>().accounts;
+              return DropdownButtonFormField<String>(
+                value: _resolveAccountId(accounts),
+                decoration: const InputDecoration(
+                  labelText: 'Account',
+                  border: OutlineInputBorder(),
+                ),
+                items: accounts.map((a) {
+                  return DropdownMenuItem(value: a.id, child: Text(a.name));
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedAccount = val);
+                },
+              );
+            }),
             const SizedBox(height: 20),
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

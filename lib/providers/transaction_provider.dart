@@ -1,4 +1,3 @@
-// lib/providers/transaction_provider.dart
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -24,6 +23,7 @@ class TransactionProvider extends ChangeNotifier {
   double _monthIncome = 0.0;
   double _monthExpense = 0.0;
   bool _hasAccounts = false;
+  List<Account> _accounts = [];
 
   TransactionType? _filterType;
   String? _filterCategoryId;
@@ -37,6 +37,14 @@ class TransactionProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get hasMore => _hasMore;
   bool get hasAccounts => _hasAccounts;
+  List<Account> get accounts => _accounts;
+
+  String accountName(String idOrName) {
+    for (final a in _accounts) {
+      if (a.id == idOrName) return a.name;
+    }
+    return idOrName; // old transactions still hold the name
+  }
 
   double get totalIncome => _hasAccounts ? _totalIncome : 0.0;
   double get totalExpense => _hasAccounts ? _totalExpense : 0.0;
@@ -58,6 +66,7 @@ class TransactionProvider extends ChangeNotifier {
   Future<void> refreshTotals() async {
     final accountCount = await _repository.getAccountCount();
     _hasAccounts = accountCount > 0;
+    _accounts = await _repository.getAllAccounts();
     _totalIncome = await _repository.getTotalIncome();
     _totalExpense = await _repository.getTotalExpense();
     final now = DateTime.now();
