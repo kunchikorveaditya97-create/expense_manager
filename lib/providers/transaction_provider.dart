@@ -17,6 +17,7 @@ class TransactionProvider extends ChangeNotifier {
   bool _hasMore = true;
   int _offset = 0;
   final int _limit = 20;
+  int _generation = 0;
 
   double _totalIncome = 0.0;
   double _totalExpense = 0.0;
@@ -74,13 +75,11 @@ class TransactionProvider extends ChangeNotifier {
   double get monthExpense => _hasAccounts ? _monthExpense : 0.0;
 
   Future<void> refreshAll() async {
+    final gen = ++_generation;
     _offset = 0;
     _hasMore = true;
     _transactions = [];
-    await Future.wait([
-      _fetchBatch(),
-      refreshTotals(),
-    ]);
+    await Future.wait([_fetchBatch(gen), refreshTotals()]);
     onTransactionDataChanged?.call();
   }
 
@@ -108,13 +107,12 @@ class TransactionProvider extends ChangeNotifier {
 
   Future<void> fetchMore() async {
     if (_isLoading || !_hasMore) return;
-    await _fetchBatch();
+    await _fetchBatch(_generation);
   }
 
-  Future<void> _fetchBatch() async {
+  Future<void> _fetchBatch(int gen) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final fetched = await _repository.getPaginatedTransactions(
         limit: _limit,
@@ -128,15 +126,14 @@ class TransactionProvider extends ChangeNotifier {
         maxAmount: _filterMax,
         searchQuery: _searchQuery,
       );
+      if (gen != _generation) return; // a newer refreshAll started; drop this one
 
-      if (fetched.length < _limit) {
-        _hasMore = false;
-      }
-
-      _transactions.addAll(fetched);
+      if (fetched.length < _limit) _hasMore = false;
+      final seen = _transactions.map((t) => t.id).toSet();
+      _transactions.addAll(fetched.where((t) => seen.add(t.id)));
       _offset += fetched.length;
     } finally {
-      _isLoading = false;
+      if (gen == _generation) _isLoading = false;
       notifyListeners();
     }
   }
