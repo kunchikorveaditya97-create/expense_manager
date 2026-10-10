@@ -38,10 +38,15 @@ void main() async {
 
   final transactionProvider = TransactionProvider(transactionRepo);
   final budgetProvider = BudgetProvider(budgetRepo);
+  final currencyProvider = CurrencyProvider();
+  final insightsProvider = InsightsProvider(database);
+  insightsProvider.formatAmount = currencyProvider.format;
+  currencyProvider.addListener(insightsProvider.generateInsights);
 
   transactionProvider.onTransactionDataChanged = () {
     final now = DateTime.now();
     budgetProvider.computeMonthlyBudget(now.month, now.year);
+    insightsProvider.generateInsights();
   };
 
   runApp(
@@ -51,10 +56,10 @@ void main() async {
         Provider<SyncService>.value(value: syncService),
         ChangeNotifierProvider(create: (_) => AppAuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => CurrencyProvider()),
+        ChangeNotifierProvider.value(value: currencyProvider),
         ChangeNotifierProvider.value(value: transactionProvider),
         ChangeNotifierProvider.value(value: budgetProvider),
-        ChangeNotifierProvider(create: (_) => InsightsProvider(database)),
+        ChangeNotifierProvider.value(value: insightsProvider),
         ChangeNotifierProvider(create: (_) => SyncProvider(syncService)),
       ],
       child: const ExpenseManagerApp(),

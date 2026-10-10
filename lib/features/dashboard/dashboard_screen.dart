@@ -7,6 +7,8 @@ import 'package:expense_manager/providers/budget_provider.dart';
 import 'package:expense_manager/providers/transaction_provider.dart';
 import 'package:expense_manager/sync/sync_provider.dart';
 import 'widgets/sync_status_badge.dart';
+import 'widgets/recent_transactions_card.dart';
+import 'widgets/insights_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -123,6 +125,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const MonthlyBudgetCard(),
+              const InsightsCard(),
+              const RecentTransactionsCard(),
             ],
           ),
         ),

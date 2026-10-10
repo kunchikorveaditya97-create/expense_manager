@@ -7,6 +7,7 @@ import '../data/local/tables.dart';
 class InsightsProvider extends ChangeNotifier {
   final AppDatabase _db;
   List<String> _insights = [];
+  String Function(double) formatAmount = (v) => v.toStringAsFixed(0);
 
   InsightsProvider(this._db) {
     generateInsights();
@@ -54,7 +55,7 @@ class InsightsProvider extends ChangeNotifier {
     final daysPassed = now.day;
     if (daysPassed > 0 && thisMonthSpent > 0) {
       final dailyAvg = thisMonthSpent / daysPassed;
-      list.add('Your average daily spending this month is ₹${dailyAvg.toStringAsFixed(0)}.');
+      list.add('Your average daily spending this month is ${formatAmount(dailyAvg)}.');
     }
 
     // 4. Top category

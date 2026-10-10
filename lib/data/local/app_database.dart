@@ -73,6 +73,14 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<List<Transaction>> getRecentTransactions({int limit = 5}) {
+    return (select(transactions)
+      ..where((t) => t.deletedAt.isNull())
+      ..orderBy([(t) => OrderingTerm.desc(t.transactionDate)])
+      ..limit(limit))
+        .get();
+  }
+
   Future<int> insertTransaction(TransactionsCompanion entry) =>
       into(transactions).insert(entry);
 
