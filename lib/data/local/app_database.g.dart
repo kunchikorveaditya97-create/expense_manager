@@ -2847,6 +2847,481 @@ class RecurringTransactionsCompanion
   }
 }
 
+class $CategoriesTable extends Categories
+    with TableInfo<$CategoriesTable, Category> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumnWithTypeConverter<TransactionType, int> type =
+      GeneratedColumn<int>('type', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<TransactionType>($CategoriesTable.$convertertype);
+  static const VerificationMeta _iconNameMeta =
+      const VerificationMeta('iconName');
+  @override
+  late final GeneratedColumn<String> iconName = GeneratedColumn<String>(
+      'icon_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _colorValueMeta =
+      const VerificationMeta('colorValue');
+  @override
+  late final GeneratedColumn<int> colorValue = GeneratedColumn<int>(
+      'color_value', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _isArchivedMeta =
+      const VerificationMeta('isArchived');
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+      'is_archived', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_archived" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _isCustomMeta =
+      const VerificationMeta('isCustom');
+  @override
+  late final GeneratedColumn<bool> isCustom = GeneratedColumn<bool>(
+      'is_custom', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_custom" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        userId,
+        name,
+        type,
+        iconName,
+        colorValue,
+        isArchived,
+        isCustom,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'categories';
+  @override
+  VerificationContext validateIntegrity(Insertable<Category> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon_name')) {
+      context.handle(_iconNameMeta,
+          iconName.isAcceptableOrUnknown(data['icon_name']!, _iconNameMeta));
+    } else if (isInserting) {
+      context.missing(_iconNameMeta);
+    }
+    if (data.containsKey('color_value')) {
+      context.handle(
+          _colorValueMeta,
+          colorValue.isAcceptableOrUnknown(
+              data['color_value']!, _colorValueMeta));
+    }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+          _isArchivedMeta,
+          isArchived.isAcceptableOrUnknown(
+              data['is_archived']!, _isArchivedMeta));
+    }
+    if (data.containsKey('is_custom')) {
+      context.handle(_isCustomMeta,
+          isCustom.isAcceptableOrUnknown(data['is_custom']!, _isCustomMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Category map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Category(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      type: $CategoriesTable.$convertertype.fromSql(attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}type'])!),
+      iconName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}icon_name'])!,
+      colorValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}color_value']),
+      isArchived: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_archived'])!,
+      isCustom: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_custom'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $CategoriesTable createAlias(String alias) {
+    return $CategoriesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<TransactionType, int, int> $convertertype =
+      const EnumIndexConverter<TransactionType>(TransactionType.values);
+}
+
+class Category extends DataClass implements Insertable<Category> {
+  final String id;
+  final String userId;
+  final String name;
+  final TransactionType type;
+  final String iconName;
+  final int? colorValue;
+  final bool isArchived;
+  final bool isCustom;
+  final DateTime createdAt;
+  const Category(
+      {required this.id,
+      required this.userId,
+      required this.name,
+      required this.type,
+      required this.iconName,
+      this.colorValue,
+      required this.isArchived,
+      required this.isCustom,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['user_id'] = Variable<String>(userId);
+    map['name'] = Variable<String>(name);
+    {
+      map['type'] = Variable<int>($CategoriesTable.$convertertype.toSql(type));
+    }
+    map['icon_name'] = Variable<String>(iconName);
+    if (!nullToAbsent || colorValue != null) {
+      map['color_value'] = Variable<int>(colorValue);
+    }
+    map['is_archived'] = Variable<bool>(isArchived);
+    map['is_custom'] = Variable<bool>(isCustom);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CategoriesCompanion toCompanion(bool nullToAbsent) {
+    return CategoriesCompanion(
+      id: Value(id),
+      userId: Value(userId),
+      name: Value(name),
+      type: Value(type),
+      iconName: Value(iconName),
+      colorValue: colorValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorValue),
+      isArchived: Value(isArchived),
+      isCustom: Value(isCustom),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Category.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Category(
+      id: serializer.fromJson<String>(json['id']),
+      userId: serializer.fromJson<String>(json['userId']),
+      name: serializer.fromJson<String>(json['name']),
+      type: $CategoriesTable.$convertertype
+          .fromJson(serializer.fromJson<int>(json['type'])),
+      iconName: serializer.fromJson<String>(json['iconName']),
+      colorValue: serializer.fromJson<int?>(json['colorValue']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
+      isCustom: serializer.fromJson<bool>(json['isCustom']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'userId': serializer.toJson<String>(userId),
+      'name': serializer.toJson<String>(name),
+      'type':
+          serializer.toJson<int>($CategoriesTable.$convertertype.toJson(type)),
+      'iconName': serializer.toJson<String>(iconName),
+      'colorValue': serializer.toJson<int?>(colorValue),
+      'isArchived': serializer.toJson<bool>(isArchived),
+      'isCustom': serializer.toJson<bool>(isCustom),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Category copyWith(
+          {String? id,
+          String? userId,
+          String? name,
+          TransactionType? type,
+          String? iconName,
+          Value<int?> colorValue = const Value.absent(),
+          bool? isArchived,
+          bool? isCustom,
+          DateTime? createdAt}) =>
+      Category(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        name: name ?? this.name,
+        type: type ?? this.type,
+        iconName: iconName ?? this.iconName,
+        colorValue: colorValue.present ? colorValue.value : this.colorValue,
+        isArchived: isArchived ?? this.isArchived,
+        isCustom: isCustom ?? this.isCustom,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  Category copyWithCompanion(CategoriesCompanion data) {
+    return Category(
+      id: data.id.present ? data.id.value : this.id,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      name: data.name.present ? data.name.value : this.name,
+      type: data.type.present ? data.type.value : this.type,
+      iconName: data.iconName.present ? data.iconName.value : this.iconName,
+      colorValue:
+          data.colorValue.present ? data.colorValue.value : this.colorValue,
+      isArchived:
+          data.isArchived.present ? data.isArchived.value : this.isArchived,
+      isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Category(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('iconName: $iconName, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, userId, name, type, iconName, colorValue,
+      isArchived, isCustom, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Category &&
+          other.id == this.id &&
+          other.userId == this.userId &&
+          other.name == this.name &&
+          other.type == this.type &&
+          other.iconName == this.iconName &&
+          other.colorValue == this.colorValue &&
+          other.isArchived == this.isArchived &&
+          other.isCustom == this.isCustom &&
+          other.createdAt == this.createdAt);
+}
+
+class CategoriesCompanion extends UpdateCompanion<Category> {
+  final Value<String> id;
+  final Value<String> userId;
+  final Value<String> name;
+  final Value<TransactionType> type;
+  final Value<String> iconName;
+  final Value<int?> colorValue;
+  final Value<bool> isArchived;
+  final Value<bool> isCustom;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CategoriesCompanion({
+    this.id = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+    this.iconName = const Value.absent(),
+    this.colorValue = const Value.absent(),
+    this.isArchived = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CategoriesCompanion.insert({
+    required String id,
+    required String userId,
+    required String name,
+    required TransactionType type,
+    required String iconName,
+    this.colorValue = const Value.absent(),
+    this.isArchived = const Value.absent(),
+    this.isCustom = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        userId = Value(userId),
+        name = Value(name),
+        type = Value(type),
+        iconName = Value(iconName),
+        createdAt = Value(createdAt);
+  static Insertable<Category> custom({
+    Expression<String>? id,
+    Expression<String>? userId,
+    Expression<String>? name,
+    Expression<int>? type,
+    Expression<String>? iconName,
+    Expression<int>? colorValue,
+    Expression<bool>? isArchived,
+    Expression<bool>? isCustom,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userId != null) 'user_id': userId,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (iconName != null) 'icon_name': iconName,
+      if (colorValue != null) 'color_value': colorValue,
+      if (isArchived != null) 'is_archived': isArchived,
+      if (isCustom != null) 'is_custom': isCustom,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CategoriesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? userId,
+      Value<String>? name,
+      Value<TransactionType>? type,
+      Value<String>? iconName,
+      Value<int?>? colorValue,
+      Value<bool>? isArchived,
+      Value<bool>? isCustom,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return CategoriesCompanion(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      iconName: iconName ?? this.iconName,
+      colorValue: colorValue ?? this.colorValue,
+      isArchived: isArchived ?? this.isArchived,
+      isCustom: isCustom ?? this.isCustom,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] =
+          Variable<int>($CategoriesTable.$convertertype.toSql(type.value));
+    }
+    if (iconName.present) {
+      map['icon_name'] = Variable<String>(iconName.value);
+    }
+    if (colorValue.present) {
+      map['color_value'] = Variable<int>(colorValue.value);
+    }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
+    if (isCustom.present) {
+      map['is_custom'] = Variable<bool>(isCustom.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('iconName: $iconName, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('isCustom: $isCustom, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2856,12 +3331,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SavingsGoalsTable savingsGoals = $SavingsGoalsTable(this);
   late final $RecurringTransactionsTable recurringTransactions =
       $RecurringTransactionsTable(this);
+  late final $CategoriesTable categories = $CategoriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [transactions, accounts, budgets, savingsGoals, recurringTransactions];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        transactions,
+        accounts,
+        budgets,
+        savingsGoals,
+        recurringTransactions,
+        categories
+      ];
 }
 
 typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
@@ -4216,6 +4698,233 @@ typedef $$RecurringTransactionsTableProcessedTableManager
         ),
         RecurringTransaction,
         PrefetchHooks Function()>;
+typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
+  required String id,
+  required String userId,
+  required String name,
+  required TransactionType type,
+  required String iconName,
+  Value<int?> colorValue,
+  Value<bool> isArchived,
+  Value<bool> isCustom,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
+  Value<String> id,
+  Value<String> userId,
+  Value<String> name,
+  Value<TransactionType> type,
+  Value<String> iconName,
+  Value<int?> colorValue,
+  Value<bool> isArchived,
+  Value<bool> isCustom,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$CategoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<TransactionType, TransactionType, int>
+      get type => $composableBuilder(
+          column: $table.type,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<String> get iconName => $composableBuilder(
+      column: $table.iconName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get colorValue => $composableBuilder(
+      column: $table.colorValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isCustom => $composableBuilder(
+      column: $table.isCustom, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$CategoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get iconName => $composableBuilder(
+      column: $table.iconName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get colorValue => $composableBuilder(
+      column: $table.colorValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isCustom => $composableBuilder(
+      column: $table.isCustom, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CategoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoriesTable> {
+  $$CategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<TransactionType, int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get iconName =>
+      $composableBuilder(column: $table.iconName, builder: (column) => column);
+
+  GeneratedColumn<int> get colorValue => $composableBuilder(
+      column: $table.colorValue, builder: (column) => column);
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCustom =>
+      $composableBuilder(column: $table.isCustom, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CategoriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CategoriesTable,
+    Category,
+    $$CategoriesTableFilterComposer,
+    $$CategoriesTableOrderingComposer,
+    $$CategoriesTableAnnotationComposer,
+    $$CategoriesTableCreateCompanionBuilder,
+    $$CategoriesTableUpdateCompanionBuilder,
+    (Category, BaseReferences<_$AppDatabase, $CategoriesTable, Category>),
+    Category,
+    PrefetchHooks Function()> {
+  $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> userId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<TransactionType> type = const Value.absent(),
+            Value<String> iconName = const Value.absent(),
+            Value<int?> colorValue = const Value.absent(),
+            Value<bool> isArchived = const Value.absent(),
+            Value<bool> isCustom = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CategoriesCompanion(
+            id: id,
+            userId: userId,
+            name: name,
+            type: type,
+            iconName: iconName,
+            colorValue: colorValue,
+            isArchived: isArchived,
+            isCustom: isCustom,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String userId,
+            required String name,
+            required TransactionType type,
+            required String iconName,
+            Value<int?> colorValue = const Value.absent(),
+            Value<bool> isArchived = const Value.absent(),
+            Value<bool> isCustom = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CategoriesCompanion.insert(
+            id: id,
+            userId: userId,
+            name: name,
+            type: type,
+            iconName: iconName,
+            colorValue: colorValue,
+            isArchived: isArchived,
+            isCustom: isCustom,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$CategoriesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CategoriesTable,
+    Category,
+    $$CategoriesTableFilterComposer,
+    $$CategoriesTableOrderingComposer,
+    $$CategoriesTableAnnotationComposer,
+    $$CategoriesTableCreateCompanionBuilder,
+    $$CategoriesTableUpdateCompanionBuilder,
+    (Category, BaseReferences<_$AppDatabase, $CategoriesTable, Category>),
+    Category,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4230,4 +4939,6 @@ class $AppDatabaseManager {
       $$SavingsGoalsTableTableManager(_db, _db.savingsGoals);
   $$RecurringTransactionsTableTableManager get recurringTransactions =>
       $$RecurringTransactionsTableTableManager(_db, _db.recurringTransactions);
+  $$CategoriesTableTableManager get categories =>
+      $$CategoriesTableTableManager(_db, _db.categories);
 }

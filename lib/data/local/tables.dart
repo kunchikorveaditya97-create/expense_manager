@@ -89,3 +89,18 @@ class RecurringTransactions extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class Categories extends Table {
+  TextColumn get id => text()();
+  TextColumn get userId => text()();
+  TextColumn get name => text()();
+  IntColumn get type => intEnum<TransactionType>()();
+  TextColumn get iconName => text()();
+  IntColumn get colorValue => integer().nullable()();
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+  BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

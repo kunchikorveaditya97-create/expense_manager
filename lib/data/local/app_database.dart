@@ -9,6 +9,7 @@ import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 import 'package:uuid/uuid.dart';
 import 'tables.dart';
 import 'db_key_service.dart';
+import '../../core/categories.dart';
 
 part 'app_database.g.dart';
 
@@ -18,24 +19,32 @@ part 'app_database.g.dart';
   Budgets,
   SavingsGoals,
   RecurringTransactions,
+  Categories,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
       await _seedDefaultAccounts();
+      await _seedDefaultCategories();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      for (final table in allTables) {
-        await m.deleteTable(table.actualTableName);
+      if (from < 2) {
+        for (final table in allTables) {
+          await m.deleteTable(table.actualTableName);
+        }
+        await m.createAll();
+        await _seedDefaultCategories();
+      } else if (from < 3) {
+        await m.createTable(categories);
+        await _seedDefaultCategories();
       }
-      await m.createAll();
     },
   );
 
@@ -69,7 +78,9 @@ class AppDatabase extends _$AppDatabase {
       await delete(budgets).go();
       await delete(savingsGoals).go();
       await delete(recurringTransactions).go();
+      await delete(categories).go();
       await _seedDefaultAccounts();
+      await _seedDefaultCategories();
     });
   }
 
@@ -190,6 +201,101 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<Account>> getAllAccounts() {
     return (select(accounts)..where((a) => a.deletedAt.isNull())).get();
+  }
+
+  Future<void> _seedDefaultCategories() async {
+    const uuid = Uuid();
+    final now = DateTime.now().toUtc();
+    for (final (name, icon) in defaultExpenseCategories) {
+      await into(categories).insert(CategoriesCompanion.insert(
+        id: uuid.v4(),
+        userId: 'default_user',
+        name: name,
+        type: TransactionType.expense,
+        iconName: icon,
+        createdAt: now,
+      ));
+    }
+    for (final (name, icon) in defaultIncomeCategories) {
+      await into(categories).insert(CategoriesCompanion.insert(
+        id: uuid.v4(),
+        userId: 'default_user',
+        name: name,
+        type: TransactionType.income,
+        iconName: icon,
+        createdAt: now,
+      ));
+    }
+  }
+
+  Future<List<Category>> getAllCategories() => select(categories).get();
+
+  Future<void> insertCategory(CategoriesCompanion entry) =>
+      into(categories).insert(entry);
+
+  Future<bool> categoryNameExists(String name, TransactionType type) async {
+    final rows = await (select(categories)
+      ..where((c) => c.name.lower().equals(name.toLowerCase()) &
+      c.type.equalsValue(type))
+      ..limit(1))
+        .get();
+    return rows.isNotEmpty;
+  }
+
+  Future<void> updateCategoryStyle(String id, String iconName, int? colorValue) {
+    return (update(categories)..where((c) => c.id.equals(id))).write(
+      CategoriesCompanion(
+        iconName: Value(iconName),
+        colorValue: Value(colorValue),
+      ),
+    );
+  }
+
+  Future<void> setCategoryArchived(String id, bool archived) {
+    return (update(categories)..where((c) => c.id.equals(id)))
+        .write(CategoriesCompanion(isArchived: Value(archived)));
+  }
+
+  Future<void> insertAccount(String name, String type, double initialBalance) {
+    final now = DateTime.now().toUtc();
+    return into(accounts).insert(AccountsCompanion(
+      id: Value(const Uuid().v4()),
+      userId: const Value('default_user'),
+      name: Value(name),
+      type: Value(type),
+      initialBalance: Value(initialBalance),
+      createdAt: Value(now),
+      updatedAt: Value(now),
+      syncStatus: const Value(SyncStatus.synced),
+    ));
+  }
+
+  Future<void> updateAccountDetails(String id, String name, double initialBalance) {
+    return (update(accounts)..where((a) => a.id.equals(id))).write(
+      AccountsCompanion(
+        name: Value(name),
+        initialBalance: Value(initialBalance),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
+  }
+
+  /// Returns false (and does nothing) if any transaction uses this account.
+  Future<bool> deleteAccountIfUnused(String id) async {
+    final usedByTxn = await (select(transactions)
+      ..where((t) => t.accountId.equals(id))
+      ..limit(1))
+        .get();
+    final usedByRecurring = await (select(recurringTransactions)
+      ..where((t) => t.accountId.equals(id))
+      ..limit(1))
+        .get();
+    if (usedByTxn.isNotEmpty || usedByRecurring.isNotEmpty) return false;
+
+    await (update(accounts)..where((a) => a.id.equals(id))).write(
+      AccountsCompanion(deletedAt: Value(DateTime.now().toUtc())),
+    );
+    return true;
   }
 
   Future<List<Transaction>> getTransactionsBetween(DateTime start, DateTime end) {

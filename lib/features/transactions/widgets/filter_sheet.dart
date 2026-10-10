@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/categories.dart';
+import '../../../providers/category_provider.dart';
 import '../../../data/local/tables.dart';
 import '../../../providers/transaction_provider.dart';
 
@@ -126,7 +126,7 @@ class _FilterSheetState extends State<FilterSheet> {
                 labelText: 'Category', border: OutlineInputBorder()),
             items: [
               const DropdownMenuItem(value: null, child: Text('All')),
-              ...allCategories
+              ...context.read<CategoryProvider>().allNames
                   .map((c) => DropdownMenuItem(value: c, child: Text(c))),
             ],
             onChanged: (v) => setState(() => _category = v),

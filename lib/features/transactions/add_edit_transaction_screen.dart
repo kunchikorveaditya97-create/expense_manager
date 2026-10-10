@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../core/categories.dart';
+import '../../providers/category_provider.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/tables.dart';
 import '../../providers/transaction_provider.dart';
@@ -33,9 +33,8 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
   String _frequency = 'monthly';
   bool _isSubmitting = false;
 
-  List<String> get _categories => _selectedType == TransactionType.expense
-      ? expenseCategories
-      : incomeCategories;
+  List<String> get _categories =>
+      context.read<CategoryProvider>().activeNames(_selectedType);
 
   @override
   void initState() {
@@ -235,21 +234,25 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
               },
             ),
             const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              value: _categories.contains(_selectedCategory)
-                  ? _selectedCategory
-                  : _categories.first,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
-              ),
-              items: _categories.map((cat) {
-                return DropdownMenuItem(value: cat, child: Text(cat));
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedCategory = val);
-              },
-            ),
+            Builder(builder: (context) {
+              context.watch<CategoryProvider>();
+              final cats = _categories.contains(_selectedCategory)
+                  ? _categories
+                  : [..._categories, _selectedCategory];
+              return DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  border: OutlineInputBorder(),
+                ),
+                items: cats
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedCategory = val);
+                },
+              );
+            }),
             const SizedBox(height: 20),
             Builder(builder: (context) {
               final accounts = context.watch<TransactionProvider>().accounts;

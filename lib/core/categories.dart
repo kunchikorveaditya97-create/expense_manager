@@ -1,8 +1,22 @@
-const expenseCategories = [
-  'Food', 'Travel', 'Shopping', 'Bills', 'Rent',
-  'Entertainment', 'Health', 'Education', 'Subscription', 'Other',
+// Seed data: (name, iconKey)
+const defaultExpenseCategories = <(String, String)>[
+  ('Food', 'restaurant'),
+  ('Travel', 'flight'),
+  ('Shopping', 'shopping_bag'),
+  ('Bills', 'receipt'),
+  ('Rent', 'home'),
+  ('Entertainment', 'movie'),
+  ('Health', 'health'),
+  ('Education', 'school'),
+  ('Subscription', 'subscriptions'),
+  ('Other', 'category'),
 ];
-const incomeCategories = [
-  'Salary', 'Freelance', 'Business', 'Investment', 'Gift', 'Other',
+
+const defaultIncomeCategories = <(String, String)>[
+  ('Salary', 'work'),
+  ('Freelance', 'laptop'),
+  ('Business', 'business'),
+  ('Investment', 'trending_up'),
+  ('Gift', 'gift'),
+  ('Other', 'category'),
 ];
-final allCategories = {...expenseCategories, ...incomeCategories}.toList();

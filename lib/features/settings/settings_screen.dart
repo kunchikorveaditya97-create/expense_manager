@@ -11,6 +11,8 @@ import '../../providers/theme_provider.dart';
 import '../../services/backup_export_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/transaction_provider.dart';
+import '../accounts/manage_accounts_screen.dart';
+import '../categories/manage_categories_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -105,6 +107,24 @@ class SettingsScreen extends StatelessWidget {
             subtitle: const Text('JSON Backup, Restore & Filtered CSV Export'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showBackupExportModal(context, backupService),
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet_outlined),
+            title: const Text('Manage Accounts'),
+            subtitle: const Text('Add, rename or remove accounts'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ManageAccountsScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.category_outlined),
+            title: const Text('Manage Categories'),
+            subtitle: const Text('Create, restyle or archive categories'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(
+                    builder: (_) => const ManageCategoriesScreen())),
           ),
 
           ListTile(

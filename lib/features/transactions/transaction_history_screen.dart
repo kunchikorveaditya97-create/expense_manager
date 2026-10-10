@@ -9,6 +9,7 @@ import '../../providers/transaction_provider.dart';
 import 'add_edit_transaction_screen.dart';
 import '../../providers/currency_provider.dart';
 import 'widgets/filter_sheet.dart';
+import '../../providers/category_provider.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -165,7 +166,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 backgroundColor:
                 isExpense ? Colors.red.shade50 : Colors.green.shade50,
                 child: Icon(
-                  isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+                  context.watch<CategoryProvider>().iconFor(item.categoryId),
                   color: isExpense ? Colors.red : Colors.green,
                 ),
               ),
