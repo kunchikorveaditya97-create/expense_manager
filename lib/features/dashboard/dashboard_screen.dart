@@ -10,6 +10,7 @@ import 'widgets/sync_status_badge.dart';
 import 'widgets/recent_transactions_card.dart';
 import 'widgets/insights_card.dart';
 import 'package:intl/intl.dart';
+import 'widgets/accounts_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -134,6 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const MonthlyBudgetCard(),
+              const AccountsCard(),
               const InsightsCard(),
               const RecentTransactionsCard(),
             ],

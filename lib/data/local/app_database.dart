@@ -189,6 +189,30 @@ class AppDatabase extends _$AppDatabase {
     return (select(accounts)..where((a) => a.deletedAt.isNull())).get();
   }
 
+  Future<Map<String, double>> _sumByAccount(TransactionType type) async {
+    final amountSum = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..addColumns([transactions.accountId, amountSum])
+      ..where(transactions.type.equalsValue(type))
+      ..where(transactions.deletedAt.isNull())
+      ..groupBy([transactions.accountId]);
+    final rows = await query.get();
+    return {
+      for (final r in rows)
+        r.read(transactions.accountId)!: r.read(amountSum) ?? 0.0,
+    };
+  }
+
+  Future<Map<String, double>> getAccountBalances() async {
+    final income = await _sumByAccount(TransactionType.income);
+    final expense = await _sumByAccount(TransactionType.expense);
+    final accs = await getAllAccounts();
+    return {
+      for (final a in accs)
+        a.id: a.initialBalance + (income[a.id] ?? 0.0) - (expense[a.id] ?? 0.0),
+    };
+  }
+
   Future<List<Transaction>> getPendingTransactions() {
     return (select(transactions)
       ..where((t) => t.syncStatus.equalsValue(SyncStatus.synced).not()))

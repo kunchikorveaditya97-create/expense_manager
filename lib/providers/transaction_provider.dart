@@ -24,6 +24,7 @@ class TransactionProvider extends ChangeNotifier {
   double _monthExpense = 0.0;
   bool _hasAccounts = false;
   List<Account> _accounts = [];
+  Map<String, double> _accountBalances = {};
 
   TransactionType? _filterType;
   String? _filterCategoryId;
@@ -38,6 +39,7 @@ class TransactionProvider extends ChangeNotifier {
   bool get hasMore => _hasMore;
   bool get hasAccounts => _hasAccounts;
   List<Account> get accounts => _accounts;
+  double balanceFor(String accountId) => _accountBalances[accountId] ?? 0.0;
 
   String accountName(String idOrName) {
     for (final a in _accounts) {
@@ -67,6 +69,7 @@ class TransactionProvider extends ChangeNotifier {
     final accountCount = await _repository.getAccountCount();
     _hasAccounts = accountCount > 0;
     _accounts = await _repository.getAllAccounts();
+    _accountBalances = await _repository.getAccountBalances();
     _totalIncome = await _repository.getTotalIncome();
     _totalExpense = await _repository.getTotalExpense();
     final now = DateTime.now();
