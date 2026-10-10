@@ -1,5 +1,4 @@
 // lib/data/repositories/budget_repository.dart
-import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../local/app_database.dart';
 import '../local/tables.dart';
@@ -12,6 +11,14 @@ abstract class IBudgetRepository {
     required int year,
   });
   Future<double> getMonthTotalExpenses(int month, int year);
+  Future<Map<String, double>> getCategoryBudgets(int month, int year);
+  Future<Map<String, double>> getCategorySpend(int month, int year);
+  Future<void> setCategoryBudget({
+    required String category,
+    required double amount,
+    required int month,
+    required int year,
+  });
 }
 
 class BudgetRepositoryImpl implements IBudgetRepository {
@@ -19,10 +26,15 @@ class BudgetRepositoryImpl implements IBudgetRepository {
 
   BudgetRepositoryImpl(this._db);
 
+  String _legacyKey(int month, int year) => 'budget_${year}_$month';
+
   @override
   Future<double> getMonthlyBudget(int month, int year) async {
+    final fromDb = await _db.getBudgetLimit('ALL', month, year);
+    if (fromDb != null) return fromDb;
+    // Fallback for budgets saved before they moved into the database.
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble('budget_${year}_$month') ?? 0.0;
+    return prefs.getDouble(_legacyKey(month, year)) ?? 0.0;
   }
 
   @override
@@ -31,23 +43,35 @@ class BudgetRepositoryImpl implements IBudgetRepository {
     required int month,
     required int year,
   }) async {
+    await _db.setBudgetLimit('ALL', month, year, amount);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('budget_${year}_$month', amount);
+    await prefs.remove(_legacyKey(month, year));
   }
 
   @override
-  Future<double> getMonthTotalExpenses(int month, int year) async {
-    final start = DateTime.utc(year, month, 1);
-    final end = DateTime.utc(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
-
-    final query = _db.select(_db.transactions)
-      ..where((t) =>
-      t.type.equals(TransactionType.expense.index) &
-      t.deletedAt.isNull() &
-      t.transactionDate.isBiggerOrEqualValue(start) &
-      t.transactionDate.isSmallerOrEqualValue(end));
-
-    final expenses = await query.get();
-    return expenses.fold<double>(0.0, (sum, item) => sum + item.amount);
+  Future<double> getMonthTotalExpenses(int month, int year) {
+    return _db.getTotalBetween(
+      TransactionType.expense,
+      DateTime(year, month, 1),
+      DateTime(year, month + 1, 1),
+    );
   }
+
+  @override
+  Future<Map<String, double>> getCategoryBudgets(int month, int year) =>
+      _db.getCategoryBudgets(month, year);
+
+  @override
+  Future<Map<String, double>> getCategorySpend(int month, int year) =>
+      _db.getExpenseByCategory(
+          DateTime(year, month, 1), DateTime(year, month + 1, 1));
+
+  @override
+  Future<void> setCategoryBudget({
+    required String category,
+    required double amount,
+    required int month,
+    required int year,
+  }) =>
+      _db.setBudgetLimit(category, month, year, amount);
 }

@@ -10,12 +10,27 @@ enum BudgetThreshold {
   exceeded,    // > 100%
 }
 
+class CategoryBudgetStatus {
+  final String category;
+  final double limit;
+  final double spent;
+  const CategoryBudgetStatus(this.category, this.limit, this.spent);
+
+  double get pct => limit > 0 ? spent / limit * 100 : 0;
+  double get ratio => (pct / 100).clamp(0.0, 1.0);
+  bool get exceeded => spent > limit;
+  double get remaining => limit - spent;
+}
+
+
 class BudgetProvider extends ChangeNotifier {
   final IBudgetRepository _budgetRepo;
 
   double _monthlyBudget = 0.0;
   double _totalSpent = 0.0;
   bool _isLoading = false;
+
+  List<CategoryBudgetStatus> _categoryStatuses = [];
 
   BudgetProvider(this._budgetRepo) {
     final now = DateTime.now();
@@ -42,6 +57,8 @@ class BudgetProvider extends ChangeNotifier {
   bool get isOverBudget => _monthlyBudget > 0 && _totalSpent > _monthlyBudget;
   bool get hasBudgetSet => _monthlyBudget > 0;
   bool get isLoading => _isLoading;
+
+  List<CategoryBudgetStatus> get categoryStatuses => _categoryStatuses;
 
   BudgetThreshold get currentThreshold {
     if (_monthlyBudget <= 0) return BudgetThreshold.safe;
@@ -78,6 +95,12 @@ class BudgetProvider extends ChangeNotifier {
     try {
       _monthlyBudget = await _budgetRepo.getMonthlyBudget(month, year);
       _totalSpent = await _budgetRepo.getMonthTotalExpenses(month, year);
+      final limits = await _budgetRepo.getCategoryBudgets(month, year);
+      final spend = await _budgetRepo.getCategorySpend(month, year);
+      _categoryStatuses = limits.entries
+          .map((e) => CategoryBudgetStatus(e.key, e.value, spend[e.key] ?? 0.0))
+          .toList()
+        ..sort((a, b) => b.pct.compareTo(a.pct));
     } catch (_) {
       // Fallback
     } finally {
@@ -90,5 +113,16 @@ class BudgetProvider extends ChangeNotifier {
     _monthlyBudget = amount;
     await _budgetRepo.setMonthlyBudget(amount: amount, month: month, year: year);
     await computeMonthlyBudget(month, year);
+  }
+
+  Future<void> setCategoryBudget(String category, double amount) async {
+    final now = DateTime.now();
+    await _budgetRepo.setCategoryBudget(
+      category: category,
+      amount: amount,
+      month: now.month,
+      year: now.year,
+    );
+    await computeMonthlyBudget(now.month, now.year);
   }
 }

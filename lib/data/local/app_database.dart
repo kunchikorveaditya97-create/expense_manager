@@ -307,6 +307,75 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  Future<double?> getBudgetLimit(String categoryId, int month, int year) async {
+    final row = await (select(budgets)
+      ..where((b) =>
+      b.categoryId.equals(categoryId) &
+      b.month.equals(month) &
+      b.year.equals(year))
+      ..limit(1))
+        .getSingleOrNull();
+    return row?.limitAmount;
+  }
+
+  /// amount <= 0 removes the budget.
+  Future<void> setBudgetLimit(
+      String categoryId, int month, int year, double amount) async {
+    final existing = await (select(budgets)
+      ..where((b) =>
+      b.categoryId.equals(categoryId) &
+      b.month.equals(month) &
+      b.year.equals(year))
+      ..limit(1))
+        .getSingleOrNull();
+
+    if (amount <= 0) {
+      if (existing != null) {
+        await (delete(budgets)..where((b) => b.id.equals(existing.id))).go();
+      }
+      return;
+    }
+    if (existing == null) {
+      await into(budgets).insert(BudgetsCompanion.insert(
+        id: const Uuid().v4(),
+        categoryId: categoryId,
+        limitAmount: amount,
+        month: month,
+        year: year,
+        syncStatus: SyncStatus.synced,
+      ));
+    } else {
+      await (update(budgets)..where((b) => b.id.equals(existing.id)))
+          .write(BudgetsCompanion(limitAmount: Value(amount)));
+    }
+  }
+
+  Future<Map<String, double>> getCategoryBudgets(int month, int year) async {
+    final rows = await (select(budgets)
+      ..where((b) =>
+      b.month.equals(month) &
+      b.year.equals(year) &
+      b.categoryId.equals('ALL').not()))
+        .get();
+    return {for (final r in rows) r.categoryId: r.limitAmount};
+  }
+
+  Future<Map<String, double>> getExpenseByCategory(
+      DateTime start, DateTime end) async {
+    final sum = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..addColumns([transactions.categoryId, sum])
+      ..where(transactions.type.equalsValue(TransactionType.expense) &
+      transactions.deletedAt.isNull() &
+      transactions.transactionDate.isBiggerOrEqualValue(start) &
+      transactions.transactionDate.isSmallerThanValue(end))
+      ..groupBy([transactions.categoryId]);
+    final rows = await query.get();
+    return {
+      for (final r in rows) r.read(transactions.categoryId)!: r.read(sum) ?? 0.0,
+    };
+  }
+
   Future<Map<String, double>> _sumByAccount(TransactionType type) async {
     final amountSum = transactions.amount.sum();
     final query = selectOnly(transactions)
