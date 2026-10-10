@@ -17,6 +17,7 @@ import 'providers/transaction_provider.dart';
 import 'services/recurring_processor.dart';
 import 'sync/sync_provider.dart';
 import 'sync/sync_service.dart';
+import 'providers/analytics_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,7 @@ void main() async {
   final budgetProvider = BudgetProvider(budgetRepo);
   final currencyProvider = CurrencyProvider();
   final insightsProvider = InsightsProvider(database);
+  final analyticsProvider = AnalyticsProvider(database);
   insightsProvider.formatAmount = currencyProvider.format;
   currencyProvider.addListener(insightsProvider.generateInsights);
 
@@ -47,6 +49,7 @@ void main() async {
     final now = DateTime.now();
     budgetProvider.computeMonthlyBudget(now.month, now.year);
     insightsProvider.generateInsights();
+    analyticsProvider.load();
   };
 
   runApp(
@@ -60,6 +63,7 @@ void main() async {
         ChangeNotifierProvider.value(value: transactionProvider),
         ChangeNotifierProvider.value(value: budgetProvider),
         ChangeNotifierProvider.value(value: insightsProvider),
+        ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider(create: (_) => SyncProvider(syncService)),
       ],
       child: const ExpenseManagerApp(),

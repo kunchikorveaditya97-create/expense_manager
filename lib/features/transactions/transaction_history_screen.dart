@@ -8,6 +8,7 @@ import '../../data/local/tables.dart';
 import '../../providers/transaction_provider.dart';
 import 'add_edit_transaction_screen.dart';
 import '../../providers/currency_provider.dart';
+import 'widgets/filter_sheet.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -18,6 +19,15 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      context.read<TransactionProvider>().setSearch(value);
+    });
+  }
 
   @override
   void initState() {
@@ -34,6 +44,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -49,10 +61,29 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         title: const Text('Transactions'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: Icon(provider.hasActiveFilters
+                ? Icons.filter_alt
+                : Icons.filter_list),
             onPressed: () => _openFilterModal(context),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search note, category or amount',
+                prefixIcon: const Icon(Icons.search),
+                isDense: true,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(28)),
+              ),
+            ),
+          ),
+        ),
       ),
       body: txns.isEmpty && !provider.isLoading
           ? const Center(child: Text('No transactions found.'))
@@ -161,50 +192,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   void _openFilterModal(BuildContext context) {
+    final provider = context.read<TransactionProvider>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Filter Transactions',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Show All'),
-                onTap: () {
-                  context.read<TransactionProvider>().clearFilters();
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Expenses Only'),
-                onTap: () {
-                  context
-                      .read<TransactionProvider>()
-                      .setFilters(type: TransactionType.expense);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Income Only'),
-                onTap: () {
-                  context
-                      .read<TransactionProvider>()
-                      .setFilters(type: TransactionType.income);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (_) => ChangeNotifierProvider.value(
+        value: provider,
+        child: const FilterSheet(),
+      ),
     );
   }
 }

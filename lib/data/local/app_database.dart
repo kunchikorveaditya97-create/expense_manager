@@ -132,7 +132,10 @@ class AppDatabase extends _$AppDatabase {
       query = query..where((t) => t.amount.isSmallerOrEqualValue(maxAmount));
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      query = query..where((t) => t.note.like('%${searchQuery.trim()}%'));
+      final q = '%${searchQuery.trim()}%';
+      query = query
+        ..where((t) =>
+        t.note.like(q) | t.categoryId.like(q) | t.amount.cast<String>().like(q));
     }
 
     query = query
@@ -187,6 +190,15 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<Account>> getAllAccounts() {
     return (select(accounts)..where((a) => a.deletedAt.isNull())).get();
+  }
+
+  Future<List<Transaction>> getTransactionsBetween(DateTime start, DateTime end) {
+    return (select(transactions)
+      ..where((t) =>
+      t.deletedAt.isNull() &
+      t.transactionDate.isBiggerOrEqualValue(start) &
+      t.transactionDate.isSmallerThanValue(end)))
+        .get();
   }
 
   Future<Map<String, double>> _sumByAccount(TransactionType type) async {

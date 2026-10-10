@@ -29,6 +29,11 @@ class TransactionProvider extends ChangeNotifier {
   TransactionType? _filterType;
   String? _filterCategoryId;
   String? _filterAccountId;
+  DateTime? _filterStart;
+  DateTime? _filterEnd;
+  double? _filterMin;
+  double? _filterMax;
+  String _searchQuery = '';
 
   TransactionProvider(this._repository) {
     refreshAll();
@@ -38,6 +43,20 @@ class TransactionProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get hasMore => _hasMore;
   bool get hasAccounts => _hasAccounts;
+  TransactionType? get filterType => _filterType;
+  String? get filterCategoryId => _filterCategoryId;
+  String? get filterAccountId => _filterAccountId;
+  DateTime? get filterStart => _filterStart;
+  DateTime? get filterEnd => _filterEnd;
+  double? get filterMin => _filterMin;
+  double? get filterMax => _filterMax;
+  bool get hasActiveFilters =>
+      _filterType != null ||
+          _filterCategoryId != null ||
+          _filterAccountId != null ||
+          _filterStart != null ||
+          _filterMin != null ||
+          _filterMax != null;
   List<Account> get accounts => _accounts;
   double balanceFor(String accountId) => _accountBalances[accountId] ?? 0.0;
 
@@ -103,6 +122,11 @@ class TransactionProvider extends ChangeNotifier {
         type: _filterType,
         categoryId: _filterCategoryId,
         accountId: _filterAccountId,
+        startDate: _filterStart,
+        endDate: _filterEnd,
+        minAmount: _filterMin,
+        maxAmount: _filterMax,
+        searchQuery: _searchQuery,
       );
 
       if (fetched.length < _limit) {
@@ -185,10 +209,27 @@ class TransactionProvider extends ChangeNotifier {
     await refreshAll();
   }
 
-  void setFilters({TransactionType? type, String? categoryId, String? accountId}) {
+  void setFilters({
+    TransactionType? type,
+    String? categoryId,
+    String? accountId,
+    DateTime? startDate,
+    DateTime? endDate,
+    double? minAmount,
+    double? maxAmount,
+  }) {
     _filterType = type;
     _filterCategoryId = categoryId;
     _filterAccountId = accountId;
+    _filterStart = startDate;
+    _filterEnd = endDate;
+    _filterMin = minAmount;
+    _filterMax = maxAmount;
+    refreshAll();
+  }
+
+  void setSearch(String query) {
+    _searchQuery = query;
     refreshAll();
   }
 
@@ -196,6 +237,10 @@ class TransactionProvider extends ChangeNotifier {
     _filterType = null;
     _filterCategoryId = null;
     _filterAccountId = null;
+    _filterStart = null;
+    _filterEnd = null;
+    _filterMin = null;
+    _filterMax = null;
     refreshAll();
   }
 }

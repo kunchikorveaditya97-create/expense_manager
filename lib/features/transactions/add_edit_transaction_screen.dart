@@ -28,15 +28,16 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
   late DateTime _selectedDate;
   bool _isSubmitting = false;
 
-  final List<String> _categories = [
-    'Food',
-    'Shopping',
-    'Bills',
-    'Transport',
-    'Salary',
-    'Investment',
-    'Other'
+  final List<String> _expenseCategories = [
+    'Food', 'Travel', 'Shopping', 'Bills', 'Rent',
+    'Entertainment', 'Health', 'Education', 'Subscription', 'Other',
   ];
+  final List<String> _incomeCategories = [
+    'Salary', 'Freelance', 'Business', 'Investment', 'Gift', 'Other',
+  ];
+  List<String> get _categories => _selectedType == TransactionType.expense
+      ? _expenseCategories
+      : _incomeCategories;
 
   @override
   void initState() {
@@ -175,7 +176,12 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
               ],
               selected: {_selectedType},
               onSelectionChanged: (set) {
-                setState(() => _selectedType = set.first);
+                setState(() {
+                  _selectedType = set.first;
+                  if (!_categories.contains(_selectedCategory)) {
+                    _selectedCategory = _categories.first;
+                  }
+                });
               },
             ),
             const SizedBox(height: 20),
