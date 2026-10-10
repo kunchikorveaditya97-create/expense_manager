@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
+import '../../providers/currency_provider.dart';
 
 class MonthlyBudgetCard extends StatelessWidget {
   const MonthlyBudgetCard({super.key});
@@ -36,10 +37,10 @@ class MonthlyBudgetCard extends StatelessWidget {
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           autofocus: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Budget Amount',
-            prefixText: '₹ ',
-            border: OutlineInputBorder(),
+            prefixText: '${context.read<CurrencyProvider>().current.symbol} ',
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
@@ -64,9 +65,10 @@ class MonthlyBudgetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final budgetProvider = context.watch<BudgetProvider>();
+    final currency = context.watch<CurrencyProvider>();
     final threshold = budgetProvider.currentThreshold;
     final statusColor = _getStatusColor(threshold, context);
-    final warning = budgetProvider.warningMessage;
+    final warning = budgetProvider.warningMessage(currency.format);
 
     return Card(
       elevation: 2,
@@ -127,13 +129,13 @@ class MonthlyBudgetCard extends StatelessWidget {
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  _metricTile('Budget', '₹${budgetProvider.monthlyBudget.toStringAsFixed(0)}'),
-                  _metricTile('Spent', '₹${budgetProvider.totalSpent.toStringAsFixed(0)}'),
+                  _metricTile('Budget', currency.format(budgetProvider.monthlyBudget)),
+                  _metricTile('Spent', currency.format(budgetProvider.totalSpent)),
                   _metricTile(
                     budgetProvider.isOverBudget ? 'Over Budget' : 'Remaining',
                     budgetProvider.isOverBudget
-                        ? '₹${budgetProvider.exceededAmount.toStringAsFixed(0)}'
-                        : '₹${budgetProvider.remaining.toStringAsFixed(0)}',
+                        ? currency.format(budgetProvider.exceededAmount)
+                        : currency.format(budgetProvider.remaining),
                     color: budgetProvider.isOverBudget ? Colors.red.shade700 : null,
                   ),
                   _metricTile(

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/tables.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/currency_provider.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -16,11 +17,11 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   int _touchedIndex = -1;
-  final currencyFormat = NumberFormat.simpleCurrency();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currency = context.watch<CurrencyProvider>();
     final txns = context.watch<TransactionProvider>().transactions;
     final expenses = txns.where((t) => t.type == TransactionType.expense && t.deletedAt == null).toList();
 
@@ -123,7 +124,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   title: Text(category, style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text('${percentage.toStringAsFixed(1)}% of total'),
                   trailing: Text(
-                    currencyFormat.format(amount),
+                    currency.format(amount),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 );

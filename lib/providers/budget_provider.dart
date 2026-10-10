@@ -53,12 +53,12 @@ class BudgetProvider extends ChangeNotifier {
     return BudgetThreshold.safe;
   }
 
-  String? get warningMessage {
+  String? warningMessage(String Function(double) formatAmount) {
     if (_monthlyBudget <= 0) return null;
     final pct = usedPercentage;
 
     if (pct > 100) {
-      return 'Budget exceeded by ₹${exceededAmount.toStringAsFixed(2)}.';
+      return 'Budget exceeded by ${formatAmount(exceededAmount)}.';
     } else if (pct >= 100) {
       return 'You have used 100% of your monthly budget.';
     } else if (pct >= 90) {

@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/tables.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/currency_provider.dart';
 
 class AddEditTransactionScreen extends StatefulWidget {
   final Transaction? transaction;
@@ -170,10 +171,10 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Amount',
-                prefixText: '₹ ',
-                border: OutlineInputBorder(),
+                prefixText: '${context.watch<CurrencyProvider>().current.symbol} ',
+                border: const OutlineInputBorder(),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {

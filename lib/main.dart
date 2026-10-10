@@ -1,8 +1,8 @@
-// lib/main.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/currency_provider.dart';
 
 import 'data/local/app_database.dart';
 import 'data/repositories/budget_repository.dart';
@@ -23,7 +23,6 @@ void main() async {
 
   try {
     await Firebase.initializeApp();
-    // Invalidate any leftover anonymous sessions
     final current = FirebaseAuth.instance.currentUser;
     if (current != null && current.isAnonymous) {
       await FirebaseAuth.instance.signOut();
@@ -52,6 +51,7 @@ void main() async {
         Provider<SyncService>.value(value: syncService),
         ChangeNotifierProvider(create: (_) => AppAuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => CurrencyProvider()),
         ChangeNotifierProvider.value(value: transactionProvider),
         ChangeNotifierProvider.value(value: budgetProvider),
         ChangeNotifierProvider(create: (_) => InsightsProvider(database)),

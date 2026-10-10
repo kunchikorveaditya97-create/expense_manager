@@ -1,14 +1,13 @@
-// lib/features/transactions/transaction_history_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../data/local/app_database.dart';
 import '../../data/local/tables.dart';
 import '../../providers/transaction_provider.dart';
 import 'add_edit_transaction_screen.dart';
+import '../../providers/currency_provider.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -19,11 +18,6 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   final ScrollController _scrollController = ScrollController();
-  final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'en_IN',
-    symbol: '₹',
-    decimalDigits: 2,
-  );
 
   @override
   void initState() {
@@ -47,6 +41,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TransactionProvider>();
+    final currency = context.watch<CurrencyProvider>();
     final txns = provider.transactions;
 
     return Scaffold(
@@ -151,7 +146,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 '${item.accountId} • ${DateFormat.yMMMd().format(item.transactionDate)}',
               ),
               trailing: Text(
-                '${isExpense ? '-' : '+'}${_currencyFormat.format(item.amount)}',
+                '${isExpense ? '-' : '+'}${currency.format(item.amount)}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,

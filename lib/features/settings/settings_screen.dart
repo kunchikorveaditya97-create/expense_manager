@@ -1,4 +1,3 @@
-// lib/features/settings/settings_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,8 +6,11 @@ import 'package:provider/provider.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/tables.dart';
 import '../../providers/budget_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/backup_export_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/transaction_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -16,6 +18,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final currencyProvider = context.watch<CurrencyProvider>();
     final db = context.read<AppDatabase>();
     final backupService = BackupExportService(db);
 
@@ -26,7 +29,6 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 12.0),
         children: [
-          // 1. Theme Preference
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             elevation: 1,
@@ -97,7 +99,6 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(indent: 16, endIndent: 16),
 
-          // 2. Backup & Export
           ListTile(
             leading: const Icon(Icons.backup_outlined),
             title: const Text('Backup & Export'),
@@ -107,11 +108,13 @@ class SettingsScreen extends StatelessWidget {
           ),
 
           ListTile(
-            leading: const Icon(Icons.currency_rupee),
+            leading: const Icon(Icons.currency_exchange),
             title: const Text('Default Currency'),
-            subtitle: const Text('INR (₹)'),
+            subtitle: Text(
+              '${currencyProvider.current.code} (${currencyProvider.current.symbol})',
+            ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
+            onTap: () => _showCurrencyPicker(context),
           ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
@@ -120,7 +123,81 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
+          const Divider(indent: 16, endIndent: 16),
+          ListTile(
+            leading: const Icon(Icons.delete_forever_outlined, color: Colors.red),
+            title: const Text('Reset Local Data'),
+            subtitle: const Text('Deletes all data stored on this device'),
+            onTap: () => _confirmResetData(context),
+          ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _confirmResetData(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset local data?'),
+        content: const Text(
+          'This deletes all transactions, accounts and budgets on this device. '
+              'Theme and currency settings stay. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final db = context.read<AppDatabase>();
+    final txnProvider = context.read<TransactionProvider>();
+    final budgetProvider = context.read<BudgetProvider>();
+
+    await db.resetAllData();
+
+    final prefs = await SharedPreferences.getInstance();
+    final budgetKeys =
+    prefs.getKeys().where((k) => k.startsWith('budget_')).toList();
+    for (final key in budgetKeys) {
+      await prefs.remove(key);
+    }
+
+    await txnProvider.refreshAll();
+    final now = DateTime.now();
+    await budgetProvider.computeMonthlyBudget(now.month, now.year);
+
+    if (context.mounted) _showSnackBar(context, 'Local data has been reset');
+  }
+
+  void _showCurrencyPicker(BuildContext context) {
+    final provider = context.read<CurrencyProvider>();
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: CurrencyProvider.options.map((option) {
+            final selected = option.code == provider.current.code;
+            return ListTile(
+              title: Text('${option.name} (${option.symbol})'),
+              trailing: selected ? const Icon(Icons.check) : null,
+              onTap: () {
+                provider.setCurrency(option);
+                Navigator.pop(ctx);
+              },
+            );
+          }).toList(),
+        ),
       ),
     );
   }

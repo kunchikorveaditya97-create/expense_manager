@@ -1,11 +1,9 @@
-// lib/features/dashboard/dashboard_screen.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:expense_manager/features/budget/budget_card.dart';
+import 'package:expense_manager/providers/currency_provider.dart';
 import 'package:expense_manager/providers/budget_provider.dart';
-import 'package:expense_manager/providers/insights_provider.dart';
 import 'package:expense_manager/providers/transaction_provider.dart';
 import 'package:expense_manager/sync/sync_provider.dart';
 import 'widgets/sync_status_badge.dart';
@@ -18,16 +16,13 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final currencyFormat = NumberFormat.currency(
-    symbol: '₹',
-    decimalDigits: 2,
-  );
 
   @override
   Widget build(BuildContext context) {
     final txnProvider = context.watch<TransactionProvider>();
     final budgetProvider = context.watch<BudgetProvider>();
     final syncProvider = context.watch<SyncProvider>();
+    final currency = context.watch<CurrencyProvider>();
 
     final balance = txnProvider.totalBalance;
     final income = txnProvider.totalIncome;
@@ -97,7 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        currencyFormat.format(balance),
+                        currency.format(balance),
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -161,7 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             Text(
-              currencyFormat.format(amount),
+              context.watch<CurrencyProvider>().format(amount),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,

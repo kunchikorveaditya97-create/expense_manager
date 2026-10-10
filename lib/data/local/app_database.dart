@@ -28,25 +28,7 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
-
-      const uuid = Uuid();
-      final now = DateTime.now().toUtc();
-      final defaultAccounts = ['Cash', 'Bank Account', 'Credit Card', 'UPI'];
-
-      for (final name in defaultAccounts) {
-        await into(accounts).insert(
-          AccountsCompanion(
-            id: Value(uuid.v4()),
-            userId: const Value('default_user'),
-            name: Value(name),
-            type: Value(name.toLowerCase().replaceAll(' ', '_')),
-            initialBalance: const Value(0.0),
-            createdAt: Value(now),
-            updatedAt: Value(now),
-            syncStatus: const Value(SyncStatus.synced),
-          ),
-        );
-      }
+      await _seedDefaultAccounts();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       for (final table in allTables) {
@@ -57,6 +39,38 @@ class AppDatabase extends _$AppDatabase {
   );
 
   // --- Transactions Operations ---
+
+  Future<void> _seedDefaultAccounts() async {
+    const uuid = Uuid();
+    final now = DateTime.now().toUtc();
+    final defaultAccounts = ['Cash', 'Bank Account', 'Credit Card', 'UPI'];
+
+    for (final name in defaultAccounts) {
+      await into(accounts).insert(
+        AccountsCompanion(
+          id: Value(uuid.v4()),
+          userId: const Value('default_user'),
+          name: Value(name),
+          type: Value(name.toLowerCase().replaceAll(' ', '_')),
+          initialBalance: const Value(0.0),
+          createdAt: Value(now),
+          updatedAt: Value(now),
+          syncStatus: const Value(SyncStatus.synced),
+        ),
+      );
+    }
+  }
+
+  Future<void> resetAllData() async {
+    await transaction(() async {
+      await delete(transactions).go();
+      await delete(accounts).go();
+      await delete(budgets).go();
+      await delete(savingsGoals).go();
+      await delete(recurringTransactions).go();
+      await _seedDefaultAccounts();
+    });
+  }
 
   Future<int> insertTransaction(TransactionsCompanion entry) =>
       into(transactions).insert(entry);
