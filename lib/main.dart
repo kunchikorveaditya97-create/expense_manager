@@ -70,7 +70,10 @@ void main() async {
     ),
   );
 
-  RecurringProcessor(database).processDueRecurring().catchError((_) {});
+  RecurringProcessor(database)
+      .processDueRecurring()
+      .then((_) => transactionProvider.refreshAll())
+      .catchError((_) {});
 }
 
 class ExpenseManagerApp extends StatelessWidget {

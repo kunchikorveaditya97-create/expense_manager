@@ -2,11 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import '../../core/categories.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/tables.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/currency_provider.dart';
+import '../../services/recurring_processor.dart';
 
 class AddEditTransactionScreen extends StatefulWidget {
   final Transaction? transaction;
@@ -14,7 +15,8 @@ class AddEditTransactionScreen extends StatefulWidget {
   const AddEditTransactionScreen({super.key, this.transaction});
 
   @override
-  State<AddEditTransactionScreen> createState() => _AddEditTransactionScreenState();
+  State<AddEditTransactionScreen> createState() =>
+      _AddEditTransactionScreenState();
 }
 
 class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
@@ -26,18 +28,14 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
   late String _selectedCategory;
   String? _selectedAccount;
   late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
+  bool _isRecurring = false;
+  String _frequency = 'monthly';
   bool _isSubmitting = false;
 
-  final List<String> _expenseCategories = [
-    'Food', 'Travel', 'Shopping', 'Bills', 'Rent',
-    'Entertainment', 'Health', 'Education', 'Subscription', 'Other',
-  ];
-  final List<String> _incomeCategories = [
-    'Salary', 'Freelance', 'Business', 'Investment', 'Gift', 'Other',
-  ];
   List<String> get _categories => _selectedType == TransactionType.expense
-      ? _expenseCategories
-      : _incomeCategories;
+      ? expenseCategories
+      : incomeCategories;
 
   @override
   void initState() {
@@ -47,6 +45,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     _selectedCategory = txn?.categoryId ?? _categories.first;
     _selectedAccount = txn?.accountId;
     _selectedDate = txn?.transactionDate ?? DateTime.now();
+    _selectedTime = TimeOfDay.fromDateTime(_selectedDate);
 
     _amountController = TextEditingController(
       text: txn != null ? txn.amount.toStringAsFixed(2) : '',
@@ -81,6 +80,20 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     }
   }
 
+  Future<void> _pickTime() async {
+    final picked =
+    await showTimePicker(context: context, initialTime: _selectedTime);
+    if (picked != null) setState(() => _selectedTime = picked);
+  }
+
+  DateTime get _combinedDateTime => DateTime(
+    _selectedDate.year,
+    _selectedDate.month,
+    _selectedDate.day,
+    _selectedTime.hour,
+    _selectedTime.minute,
+  );
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -103,6 +116,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
       if (accountId == null) {
         throw Exception('No account available');
       }
+      final when = _combinedDateTime;
 
       if (isEditing) {
         await provider.updateTransaction(
@@ -112,7 +126,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
           categoryId: _selectedCategory,
           accountId: accountId,
           note: trimmedNote,
-          transactionDate: _selectedDate,
+          transactionDate: when,
         );
       } else {
         await provider.createTransaction(
@@ -122,8 +136,21 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
           categoryId: _selectedCategory,
           accountId: accountId,
           note: trimmedNote,
-          transactionDate: _selectedDate,
+          transactionDate: when,
         );
+
+        if (_isRecurring) {
+          await provider.createRecurring(
+            userId: 'default_user',
+            amount: enteredAmount,
+            type: _selectedType,
+            categoryId: _selectedCategory,
+            accountId: accountId,
+            note: trimmedNote,
+            frequency: _frequency,
+            firstDate: nextRecurrence(when, _frequency),
+          );
+        }
       }
 
       if (mounted) {
@@ -187,11 +214,13 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
             const SizedBox(height: 20),
             TextFormField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 labelText: 'Amount',
-                prefixText: '${context.watch<CurrencyProvider>().current.symbol} ',
+                prefixText:
+                '${context.watch<CurrencyProvider>().current.symbol} ',
                 border: const OutlineInputBorder(),
               ),
               validator: (value) {
@@ -240,7 +269,8 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
             }),
             const SizedBox(height: 20),
             ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               shape: RoundedRectangleBorder(
                 side: BorderSide(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(4),
@@ -252,6 +282,20 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
               onTap: _pickDate,
             ),
             const SizedBox(height: 20),
+            ListTile(
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              leading: const Icon(Icons.access_time),
+              title: const Text('Time'),
+              subtitle: Text(_selectedTime.format(context)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: _pickTime,
+            ),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _noteController,
               decoration: const InputDecoration(
@@ -259,6 +303,33 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+            if (!isEditing) ...[
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Recurring transaction'),
+                subtitle: const Text('Repeats automatically'),
+                value: _isRecurring,
+                onChanged: (v) => setState(() => _isRecurring = v),
+              ),
+              if (_isRecurring)
+                DropdownButtonFormField<String>(
+                  value: _frequency,
+                  decoration: const InputDecoration(
+                    labelText: 'Repeats',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                    DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                    DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                    DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _frequency = v);
+                  },
+                ),
+            ],
             const SizedBox(height: 30),
             FilledButton.icon(
               onPressed: _isSubmitting ? null : _submitForm,
@@ -266,7 +337,8 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                   ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
               )
                   : const Icon(Icons.check),
               label: Text(

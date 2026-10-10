@@ -197,6 +197,35 @@ class TransactionProvider extends ChangeNotifier {
     await refreshAll();
   }
 
+  Future<void> createRecurring({
+    required String userId,
+    required double amount,
+    required TransactionType type,
+    required String categoryId,
+    required String accountId,
+    String? note,
+    required String frequency,
+    required DateTime firstDate,
+  }) async {
+    final now = DateTime.now().toUtc();
+    await _repository.insertRecurring(
+      RecurringTransactionsCompanion(
+        id: Value(_uuid.v4()),
+        userId: Value(userId),
+        amount: Value(amount.abs()),
+        type: Value(type),
+        categoryId: Value(categoryId),
+        accountId: Value(accountId),
+        note: Value(note),
+        frequency: Value(frequency),
+        nextExecutionDate: Value(firstDate),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+        syncStatus: const Value(SyncStatus.pendingCreate),
+      ),
+    );
+  }
+
   Future<void> deleteTransaction(String id) async {
     await _repository.softDeleteTransaction(id);
     _transactions.removeWhere((t) => t.id == id);

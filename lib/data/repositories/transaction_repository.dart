@@ -1,4 +1,3 @@
-// lib/data/repositories/transaction_repository.dart
 import 'package:drift/drift.dart';
 import '../local/app_database.dart';
 import '../local/tables.dart';
@@ -26,6 +25,7 @@ abstract class ITransactionRepository {
   Future<int> getAccountCount();
   Future<List<Account>> getAllAccounts();
   Future<Map<String, double>> getAccountBalances();
+  Future<void> insertRecurring(RecurringTransactionsCompanion companion);
 }
 
 class TransactionRepositoryImpl implements ITransactionRepository {
@@ -115,4 +115,9 @@ class TransactionRepositoryImpl implements ITransactionRepository {
 
   @override
   Future<Map<String, double>> getAccountBalances() => _db.getAccountBalances();
+
+  @override
+  Future<void> insertRecurring(RecurringTransactionsCompanion companion) async {
+    await _db.into(_db.recurringTransactions).insert(companion);
+  }
 }
