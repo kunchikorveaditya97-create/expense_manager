@@ -1,4 +1,6 @@
 // lib/providers/insights_provider.dart
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import '../data/local/app_database.dart';
@@ -6,60 +8,76 @@ import '../data/local/tables.dart';
 
 class InsightsProvider extends ChangeNotifier {
   final AppDatabase _db;
+  final DateTime Function() _clock;
   List<String> _insights = [];
   String Function(double) formatAmount = (v) => v.toStringAsFixed(0);
 
-  InsightsProvider(this._db) {
+  /// [clock] exists so tests can pin "now"; the app uses the real time.
+  InsightsProvider(this._db, {DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now {
     generateInsights();
   }
 
   List<String> get insights => _insights;
 
   Future<void> generateInsights() async {
-    final now = DateTime.now();
-    final List<String> list = [];
+    final now = _clock();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final list = <String>[];
 
-    // 1. Week-over-week calculation
-    final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
-    final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
-    final lastWeekEnd = thisWeekStart.subtract(const Duration(milliseconds: 1));
+    // 1. Week over week: this week so far vs the SAME days of last week
+    //    (Mon..today), so early in the week the comparison is fair.
+    final thisWeekStart =
+    DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final lastWeekStart = DateTime(
+        thisWeekStart.year, thisWeekStart.month, thisWeekStart.day - 7);
+    final lastWeekEnd = DateTime(
+        lastWeekStart.year, lastWeekStart.month, lastWeekStart.day + now.weekday);
 
-    final thisWeekSpent = await _getExpensesBetween(thisWeekStart, now);
-    final lastWeekSpent = await _getExpensesBetween(lastWeekStart, lastWeekEnd);
+    final thisWeekSpent = await _expensesBetween(thisWeekStart, tomorrow);
+    final lastWeekSpent = await _expensesBetween(lastWeekStart, lastWeekEnd);
 
     if (lastWeekSpent > 0) {
-      final diff = ((thisWeekSpent - lastWeekSpent) / lastWeekSpent) * 100;
+      final diff =
+      ((thisWeekSpent - lastWeekSpent) / lastWeekSpent * 100).round();
       if (diff > 0) {
-        list.add('You spent ${diff.toStringAsFixed(0)}% more this week than last week.');
+        list.add('You spent $diff% more this week than last week.');
       } else if (diff < 0) {
-        list.add('Your spending decreased by ${diff.abs().toStringAsFixed(0)}% compared to last week.');
+        list.add(
+            'Your spending decreased by ${diff.abs()}% compared to last week.');
       }
     }
 
-    // 2. Month-over-month calculation
-    final firstDayThisMonth = DateTime(now.year, now.month, 1);
-    final firstDayLastMonth = DateTime(now.year, now.month - 1, 1);
-    final lastDayLastMonth = DateTime(now.year, now.month, 0, 23, 59, 59);
+    // 2. Month over month: this month so far vs the same days of last month.
+    final firstThisMonth = DateTime(now.year, now.month, 1);
+    final firstLastMonth = DateTime(now.year, now.month - 1, 1);
+    final lastMonthLength = DateTime(now.year, now.month, 0).day;
+    final lastMonthEnd = DateTime(firstLastMonth.year, firstLastMonth.month,
+        math.min(now.day, lastMonthLength) + 1);
 
-    final thisMonthSpent = await _getExpensesBetween(firstDayThisMonth, now);
-    final lastMonthSpent = await _getExpensesBetween(firstDayLastMonth, lastDayLastMonth);
+    final thisMonthSpent = await _expensesBetween(firstThisMonth, tomorrow);
+    final lastMonthSpent = await _expensesBetween(firstLastMonth, lastMonthEnd);
 
     if (lastMonthSpent > 0) {
-      final mDiff = ((thisMonthSpent - lastMonthSpent) / lastMonthSpent) * 100;
-      if (mDiff < 0) {
-        list.add('Your spending decreased by ${mDiff.abs().toStringAsFixed(0)}% compared with last month.');
+      final diff =
+      ((thisMonthSpent - lastMonthSpent) / lastMonthSpent * 100).round();
+      if (diff < 0) {
+        list.add(
+            'Your spending decreased by ${diff.abs()}% compared with last month.');
+      } else if (diff > 0) {
+        list.add('Your spending increased by $diff% compared with last month.');
       }
     }
 
-    // 3. Average daily spending this month
-    final daysPassed = now.day;
-    if (daysPassed > 0 && thisMonthSpent > 0) {
-      final dailyAvg = thisMonthSpent / daysPassed;
-      list.add('Your average daily spending this month is ${formatAmount(dailyAvg)}.');
+    // 3. Average daily spending this month.
+    if (thisMonthSpent > 0) {
+      final dailyAvg = thisMonthSpent / now.day;
+      list.add(
+          'Your average daily spending this month is ${formatAmount(dailyAvg)}.');
     }
 
-    // 4. Top category
-    final topCategory = await _getTopExpenseCategory(firstDayThisMonth, now);
+    // 4. Top expense category this month.
+    final topCategory = await _topExpenseCategory(firstThisMonth, tomorrow);
     if (topCategory != null && topCategory.isNotEmpty) {
       list.add('$topCategory is your highest expense category this month.');
     }
@@ -68,19 +86,20 @@ class InsightsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<double> _getExpensesBetween(DateTime start, DateTime end) async {
+  /// Sum of expenses in [start, end).
+  Future<double> _expensesBetween(DateTime start, DateTime end) async {
     final amountSum = _db.transactions.amount.sum();
     final query = _db.selectOnly(_db.transactions)
       ..addColumns([amountSum])
       ..where(_db.transactions.type.equalsValue(TransactionType.expense))
       ..where(_db.transactions.deletedAt.isNull())
       ..where(_db.transactions.transactionDate.isBiggerOrEqualValue(start))
-      ..where(_db.transactions.transactionDate.isSmallerOrEqualValue(end));
+      ..where(_db.transactions.transactionDate.isSmallerThanValue(end));
     final row = await query.getSingle();
     return row.read(amountSum) ?? 0.0;
   }
 
-  Future<String?> _getTopExpenseCategory(DateTime start, DateTime end) async {
+  Future<String?> _topExpenseCategory(DateTime start, DateTime end) async {
     final amountSum = _db.transactions.amount.sum();
     final catCol = _db.transactions.categoryId;
     final query = _db.selectOnly(_db.transactions)
@@ -88,7 +107,7 @@ class InsightsProvider extends ChangeNotifier {
       ..where(_db.transactions.type.equalsValue(TransactionType.expense))
       ..where(_db.transactions.deletedAt.isNull())
       ..where(_db.transactions.transactionDate.isBiggerOrEqualValue(start))
-      ..where(_db.transactions.transactionDate.isSmallerOrEqualValue(end))
+      ..where(_db.transactions.transactionDate.isSmallerThanValue(end))
       ..groupBy([catCol])
       ..orderBy([OrderingTerm.desc(amountSum)])
       ..limit(1);

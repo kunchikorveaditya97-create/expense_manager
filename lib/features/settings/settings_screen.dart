@@ -140,13 +140,6 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showCurrencyPicker(context),
           ),
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: const Text('Budget Alerts & Notifications'),
-            subtitle: const Text('Threshold alerts at 50%, 75%, 90%, 100%'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
           const Divider(indent: 16, endIndent: 16),
           ListTile(
             leading: const Icon(Icons.delete_forever_outlined, color: Colors.red),
