@@ -8,6 +8,7 @@ import 'package:sqlite3/open.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 import 'package:uuid/uuid.dart';
 import 'tables.dart';
+import 'db_key_service.dart';
 
 part 'app_database.g.dart';
 
@@ -172,16 +173,25 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'secure_expense_manager.db'));
 
+    final key = await DbKeyService.getOrCreateKey();
+    const legacyKey = DbKeyService.legacyKey;
+
     return NativeDatabase.createInBackground(
       file,
       isolateSetup: () async {
-        // Registered inside the background isolate where sqlite3 runs
         await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
         open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
       },
       setup: (rawDb) {
-        // Enforce SQLCipher encryption key
-        rawDb.execute("PRAGMA key = 'expense_manager_secure_local_key';");
+        rawDb.execute("PRAGMA key = '$key';");
+        try {
+          // Fails if the database still uses the old hardcoded key
+          rawDb.select('SELECT count(*) FROM sqlite_master;');
+        } catch (_) {
+          rawDb.execute("PRAGMA key = '$legacyKey';");
+          rawDb.select('SELECT count(*) FROM sqlite_master;');
+          rawDb.execute("PRAGMA rekey = '$key';");
+        }
       },
     );
   });
