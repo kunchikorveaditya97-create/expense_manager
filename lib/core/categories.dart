@@ -1,4 +1,3 @@
-// Seed data: (name, iconKey)
 const defaultExpenseCategories = <(String, String)>[
   ('Food', 'restaurant'),
   ('Travel', 'flight'),

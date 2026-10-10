@@ -1,11 +1,9 @@
-// lib/data/local/db_key_service.dart
 import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DbKeyService {
   static const String _storageKey = 'db_encryption_key';
 
-  // The old hardcoded key, kept only to convert existing databases.
   static const String legacyKey = 'expense_manager_secure_local_key';
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage();

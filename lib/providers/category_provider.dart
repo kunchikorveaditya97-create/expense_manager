@@ -23,7 +23,6 @@ class CategoryProvider extends ChangeNotifier {
       .map((c) => c.name)
       .toList();
 
-  /// Every category name ever used (archived included), for filters.
   List<String> get allNames => _all.map((c) => c.name).toSet().toList();
 
   IconData iconFor(String name) {
@@ -38,7 +37,6 @@ class CategoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns an error message, or null on success.
   Future<String?> add(
       String name,
       TransactionType type,

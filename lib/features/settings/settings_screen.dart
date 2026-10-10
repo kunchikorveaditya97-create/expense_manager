@@ -17,6 +17,8 @@ import '../../providers/category_provider.dart';
 import '../../providers/goal_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../providers/auth_provider.dart';
+import '../../sync/sync_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -147,9 +149,82 @@ class SettingsScreen extends StatelessWidget {
             subtitle: const Text('Deletes all data stored on this device'),
             onTap: () => _confirmResetData(context),
           ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Log out'),
+            subtitle: Text(context.watch<AppAuthProvider>().currentUserEmail),
+            onTap: () => _confirmLogout(context),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final auth = context.read<AppAuthProvider>();
+    final sync = context.read<SyncProvider>();
+    final db = context.read<AppDatabase>();
+    final txnProvider = context.read<TransactionProvider>();
+    final budgetProvider = context.read<BudgetProvider>();
+    final categoryProvider = context.read<CategoryProvider>();
+    final goalProvider = context.read<GoalProvider>();
+
+    await sync.refreshStatus();
+    if (sync.pendingCount > 0) {
+      await sync.syncAll();
+      await sync.refreshStatus();
+    }
+    if (!context.mounted) return;
+
+    final pending = sync.pendingCount;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out?'),
+        content: Text(
+          pending > 0
+              ? '$pending change${pending == 1 ? '' : 's'} could not be uploaded '
+              '(you may be offline). If you log out now, they will be lost.'
+              : 'Your data is synced. It will be removed from this device and '
+              'restored when you log back in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: pending > 0
+                ? FilledButton.styleFrom(backgroundColor: Colors.red)
+                : null,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(pending > 0 ? 'Log out anyway' : 'Log out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await auth.signOut();
+
+    await db.resetAllData();
+    final prefs = await SharedPreferences.getInstance();
+    final stale = prefs
+        .getKeys()
+        .where((k) =>
+    k.startsWith('budget_') ||
+        k.startsWith('sync_cursor_') ||
+        k.startsWith('sync_last_'))
+        .toList();
+    for (final k in stale) {
+      await prefs.remove(k);
+    }
+
+    await txnProvider.refreshAll();
+    await categoryProvider.load();
+    await goalProvider.load();
+    final now = DateTime.now();
+    await budgetProvider.computeMonthlyBudget(now.month, now.year);
   }
 
   Future<void> _confirmResetData(BuildContext context) async {

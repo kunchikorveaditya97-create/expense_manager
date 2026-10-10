@@ -21,7 +21,7 @@ class _MainNavScaffoldState extends State<MainNavScaffold> {
   final List<Widget> _pages = const [
     DashboardScreen(),
     AnalyticsScreen(),
-    SizedBox.shrink(), // Center placeholder for the floating action button
+    SizedBox.shrink(),
     TransactionHistoryScreen(),
     SettingsScreen(),
   ];

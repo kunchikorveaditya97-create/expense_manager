@@ -45,7 +45,6 @@ final cashAccount = Account(
   syncStatus: SyncStatus.synced,
 );
 
-/// In-memory repository so provider logic is tested without a database.
 class FakeTransactionRepository implements ITransactionRepository {
   FakeTransactionRepository({
     List<Transaction>? seed,
@@ -293,9 +292,8 @@ void main() {
         seed: [for (var i = 0; i < 5; i++) tx('id$i')],
         queryDelay: const Duration(milliseconds: 20),
       );
-      final p = TransactionProvider(repo); // starts a refresh itself
+      final p = TransactionProvider(repo);
 
-      // Two more refreshes while the first is still in flight.
       final r1 = p.refreshAll();
       final r2 = p.refreshAll();
       await Future.wait([r1, r2]);

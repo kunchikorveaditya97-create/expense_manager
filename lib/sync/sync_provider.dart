@@ -1,4 +1,3 @@
-// lib/sync/sync_provider.dart
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -8,12 +7,6 @@ import 'sync_service.dart';
 
 enum SyncUiState { localOnly, synced, syncing, pending, offline, failed }
 
-/// Drives automatic sync and exposes status for the UI.
-///
-/// Sync is triggered by: app start, sign-in/out, connectivity coming back,
-/// app resume, a debounced run after local writes, a periodic timer, and a
-/// short retry after the server could not be reached. None of it blocks the
-/// UI: every screen reads the local DB.
 class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   SyncProvider(
       this._service, {
@@ -27,12 +20,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   final SyncService _service;
   final Connectivity _connectivity;
   final Duration _interval;
-  // Longer than the 3 s "Undo" window on delete, so an undone delete is
-  // normally never uploaded at all.
   final Duration _writeDebounce;
 
-  /// Called after a sync brought remote changes into the local DB, so the
-  /// app can reload providers.
   VoidCallback? onDataPulled;
 
   StreamSubscription<List<ConnectivityResult>>? _connSub;
@@ -45,18 +34,16 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _disposed = false;
   bool _isSyncing = false;
   bool _rerun = false;
-  bool _isOnline = true; // interface-level, refined by sync results
-  bool _unreachable = false; // interface up but cloud not reachable
+  bool _isOnline = true;
+  bool _unreachable = false;
   bool _lastSyncFailed = false;
   int _waiting = 0;
   int _failed = 0;
   DateTime? _lastSyncAt;
 
-  // ------------------------------------------------------------ getters ---
 
   bool get isSyncing => _isSyncing;
 
-  /// Everything not yet in the cloud (waiting + failed).
   int get pendingCount => _waiting + _failed;
   int get failedCount => _failed;
   DateTime? get lastSyncAt => _lastSyncAt;
@@ -91,9 +78,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  // ---------------------------------------------------------- lifecycle ---
 
-  /// Call once, after callbacks are wired (see main.dart).
   Future<void> start() async {
     if (_started) return;
     _started = true;
@@ -101,7 +86,6 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _isOnline = _hasNetwork(await _connectivity.checkConnectivity());
     _connSub = _connectivity.onConnectivityChanged.listen(_onConnectivity);
-    // skip(1): the first event is the current user, start() syncs below.
     _authSub = _service.userChanges.skip(1).listen((_) {
       _unreachable = false;
       _lastSyncFailed = false;
@@ -131,9 +115,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) syncAll();
   }
 
-  // --------------------------------------------------------------- sync ---
 
-  /// Reload counters/last-sync time and notify. Cheap; safe to call often.
   Future<void> refreshStatus() async {
     try {
       _waiting = await _service.getPendingChangesCount();
@@ -145,12 +127,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     _notify();
   }
 
-  /// Kept for existing callers.
   Future<void> checkPendingChanges() => refreshStatus();
 
-  /// Call after any local write. Updates the badge immediately and schedules
-  /// an upload shortly after, only if something is actually waiting (which
-  /// also prevents a refresh -> sync -> refresh loop).
   Future<void> notifyLocalChange() async {
     await refreshStatus();
     if (pendingCount == 0) return;
@@ -161,7 +139,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> syncAll() async {
     if (_disposed) return;
     if (_isSyncing) {
-      _rerun = true; // something changed mid-run; go once more afterwards
+      _rerun = true;
       return;
     }
     if (!_service.isSignedIn || !_isOnline) {

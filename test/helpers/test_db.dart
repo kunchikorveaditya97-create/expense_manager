@@ -3,8 +3,6 @@ import 'package:drift/native.dart';
 import 'package:expense_manager/data/local/app_database.dart';
 import 'package:expense_manager/data/local/tables.dart';
 
-/// Fresh in-memory database (unencrypted, seeded with default accounts and
-/// categories by the normal onCreate migration).
 AppDatabase openTestDb() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   return AppDatabase(NativeDatabase.memory());
@@ -12,7 +10,6 @@ AppDatabase openTestDb() {
 
 int _counter = 0;
 
-/// Inserts one transaction row. [date] is the transaction date.
 Future<void> addTxn(
     AppDatabase db, {
       required double amount,

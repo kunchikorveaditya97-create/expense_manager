@@ -1,13 +1,12 @@
-// lib/providers/budget_provider.dart
 import 'package:flutter/foundation.dart';
 import '../data/repositories/budget_repository.dart';
 
 enum BudgetThreshold {
-  safe,        // < 50%
-  half,        // >= 50% & < 75%
-  warning,     // >= 75% & < 90%
-  critical,    // >= 90% & <= 100%
-  exceeded,    // > 100%
+  safe,
+  half,
+  warning,
+  critical,
+  exceeded,
 }
 
 class CategoryBudgetStatus {
@@ -102,7 +101,6 @@ class BudgetProvider extends ChangeNotifier {
           .toList()
         ..sort((a, b) => b.pct.compareTo(a.pct));
     } catch (_) {
-      // Fallback
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/recent_transactions_card.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +12,6 @@ class RecentTransactionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Watching makes this card reload whenever transactions change
     context.watch<TransactionProvider>();
     final currency = context.watch<CurrencyProvider>();
     final db = context.read<AppDatabase>();

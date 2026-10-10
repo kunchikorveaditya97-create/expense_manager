@@ -2,8 +2,6 @@ import 'package:expense_manager/data/repositories/budget_repository.dart';
 import 'package:expense_manager/providers/budget_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// In-memory budget repository. Only the methods BudgetProvider calls are
-/// implemented; anything else throws via noSuchMethod.
 class FakeBudgetRepository implements IBudgetRepository {
   FakeBudgetRepository({
     this.monthly = 0,
@@ -65,7 +63,7 @@ String fmt(double v) => '\$${v.toStringAsFixed(0)}';
 
 Future<BudgetProvider> load(FakeBudgetRepository repo) async {
   final p = BudgetProvider(repo);
-  await pumpEventQueue(); // constructor starts an async load
+  await pumpEventQueue();
   return p;
 }
 
@@ -88,7 +86,7 @@ void main() {
           expect(p.remaining, 0);
           expect(p.exceededAmount, 125);
           expect(p.isOverBudget, isTrue);
-          expect(p.progressRatio, 1.0); // bar never overflows
+          expect(p.progressRatio, 1.0);
         });
 
     test('no budget set: everything is zero and safe', () async {
@@ -111,7 +109,7 @@ void main() {
       750: BudgetThreshold.warning,
       899: BudgetThreshold.warning,
       900: BudgetThreshold.critical,
-      1000: BudgetThreshold.critical, // exactly 100% is not "exceeded"
+      1000: BudgetThreshold.critical,
       1001: BudgetThreshold.exceeded,
     };
 
@@ -171,7 +169,7 @@ void main() {
 
       final travel = p.categoryStatuses.first;
       expect(travel.pct, 100);
-      expect(travel.exceeded, isFalse); // exactly at limit
+      expect(travel.exceeded, isFalse);
       expect(travel.remaining, 0);
 
       final food = p.categoryStatuses.last;
@@ -243,7 +241,7 @@ void main() {
 
       await p.computeMonthlyBudget(10, 2026);
 
-      expect(notified, greaterThanOrEqualTo(2)); // loading on, loading off
+      expect(notified, greaterThanOrEqualTo(2));
     });
   });
 }

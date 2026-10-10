@@ -29,8 +29,6 @@ void main() async {
 
   try {
     await Firebase.initializeApp();
-    // Our local DB is the offline cache. Firestore's own offline queue would
-    // replay stale writes behind our back and bypass the pull-then-merge step.
     FirebaseFirestore.instance.settings =
     const Settings(persistenceEnabled: false);
     final current = FirebaseAuth.instance.currentUser;
@@ -64,11 +62,9 @@ void main() async {
     budgetProvider.computeMonthlyBudget(now.month, now.year);
     insightsProvider.generateInsights();
     analyticsProvider.load();
-    // Local data changed: update the badge and schedule an upload.
     syncProvider.notifyLocalChange();
   };
 
-  // Remote changes were merged into SQLite: reload what the UI reads.
   syncProvider.onDataPulled = () {
     transactionProvider.refreshAll();
     categoryProvider.load();
@@ -96,7 +92,6 @@ void main() async {
     ),
   );
 
-  // Start auto-sync only after the UI is up and callbacks are wired.
   syncProvider.start();
 
   RecurringProcessor(database)
@@ -127,7 +122,6 @@ class ExpenseManagerApp extends StatelessWidget {
         colorSchemeSeed: Colors.indigo,
         brightness: Brightness.dark,
       ),
-      // Only authenticated users proceed to dashboard; otherwise show LoginScreen
       home: authProvider.status == AuthStatus.authenticated
           ? const MainNavScaffold()
           : const LoginScreen(),

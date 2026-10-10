@@ -1,4 +1,3 @@
-// lib/data/local/app_database.dart
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -48,25 +47,28 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
-  // --- Transactions Operations ---
 
   Future<void> _seedDefaultAccounts() async {
-    const uuid = Uuid();
-    final now = DateTime.now().toUtc();
-    final defaultAccounts = ['Cash', 'Bank Account', 'Credit Card', 'UPI'];
-
-    for (final name in defaultAccounts) {
+    final epoch = DateTime.utc(2000);
+    const defaults = {
+      'default_cash': ('Cash', 'cash'),
+      'default_bank_account': ('Bank Account', 'bank_account'),
+      'default_credit_card': ('Credit Card', 'credit_card'),
+      'default_upi': ('UPI', 'upi'),
+    };
+    for (final e in defaults.entries) {
       await into(accounts).insert(
         AccountsCompanion(
-          id: Value(uuid.v4()),
+          id: Value(e.key),
           userId: const Value('default_user'),
-          name: Value(name),
-          type: Value(name.toLowerCase().replaceAll(' ', '_')),
+          name: Value(e.value.$1),
+          type: Value(e.value.$2),
           initialBalance: const Value(0.0),
-          createdAt: Value(now),
-          updatedAt: Value(now),
+          createdAt: Value(epoch),
+          updatedAt: Value(epoch),
           syncStatus: const Value(SyncStatus.synced),
         ),
+        mode: InsertMode.insertOrIgnore,
       );
     }
   }
@@ -266,7 +268,7 @@ class AppDatabase extends _$AppDatabase {
       initialBalance: Value(initialBalance),
       createdAt: Value(now),
       updatedAt: Value(now),
-      syncStatus: const Value(SyncStatus.synced),
+      syncStatus: const Value(SyncStatus.pendingCreate),
     ));
   }
 
@@ -276,11 +278,11 @@ class AppDatabase extends _$AppDatabase {
         name: Value(name),
         initialBalance: Value(initialBalance),
         updatedAt: Value(DateTime.now().toUtc()),
+        syncStatus: const Value(SyncStatus.pendingUpdate),
       ),
     );
   }
 
-  /// Returns false (and does nothing) if any transaction uses this account.
   Future<bool> deleteAccountIfUnused(String id) async {
     final usedByTxn = await (select(transactions)
       ..where((t) => t.accountId.equals(id))
@@ -292,8 +294,13 @@ class AppDatabase extends _$AppDatabase {
         .get();
     if (usedByTxn.isNotEmpty || usedByRecurring.isNotEmpty) return false;
 
+    final now = DateTime.now().toUtc();
     await (update(accounts)..where((a) => a.id.equals(id))).write(
-      AccountsCompanion(deletedAt: Value(DateTime.now().toUtc())),
+      AccountsCompanion(
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+        syncStatus: const Value(SyncStatus.pendingDelete),
+      ),
     );
     return true;
   }
@@ -318,7 +325,6 @@ class AppDatabase extends _$AppDatabase {
     return row?.limitAmount;
   }
 
-  /// amount <= 0 removes the budget.
   Future<void> setBudgetLimit(
       String categoryId, int month, int year, double amount) async {
     final existing = await (select(budgets)
@@ -396,7 +402,7 @@ class AppDatabase extends _$AppDatabase {
       iconName: iconName,
       createdAt: now,
       updatedAt: now,
-      syncStatus: SyncStatus.synced,
+      syncStatus: SyncStatus.pendingCreate,
     ));
   }
 
@@ -409,6 +415,7 @@ class AppDatabase extends _$AppDatabase {
         targetDate: Value(targetDate),
         iconName: Value(iconName),
         updatedAt: Value(DateTime.now().toUtc()),
+        syncStatus: const Value(SyncStatus.pendingUpdate),
       ),
     );
   }
@@ -421,17 +428,22 @@ class AppDatabase extends _$AppDatabase {
       SavingsGoalsCompanion(
         currentAmount: Value(next),
         updatedAt: Value(DateTime.now().toUtc()),
+        syncStatus: const Value(SyncStatus.pendingUpdate),
       ),
     );
   }
 
   Future<void> softDeleteGoal(String id) {
+    final now = DateTime.now().toUtc();
     return (update(savingsGoals)..where((g) => g.id.equals(id))).write(
-      SavingsGoalsCompanion(deletedAt: Value(DateTime.now().toUtc())),
+      SavingsGoalsCompanion(
+        deletedAt: Value(now),
+        updatedAt: Value(now),
+        syncStatus: const Value(SyncStatus.pendingDelete),
+      ),
     );
   }
 
-  /// Replaces everything in one transaction. Callers validate first.
   Future<void> replaceAllData({
     required List<AccountsCompanion> accountRows,
     required List<CategoriesCompanion> categoryRows,
@@ -512,7 +524,6 @@ LazyDatabase _openConnection() {
       setup: (rawDb) {
         rawDb.execute("PRAGMA key = '$key';");
         try {
-          // Fails if the database still uses the old hardcoded key
           rawDb.select('SELECT count(*) FROM sqlite_master;');
         } catch (_) {
           rawDb.execute("PRAGMA key = '$legacyKey';");

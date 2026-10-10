@@ -45,8 +45,7 @@ void main() {
 
       expect(r.record['amount'], 30);
       expect(r.record['note'], 'Dinner');
-      expect(r.needsPush, isTrue); // merged result must be uploaded
-      // bumped so devices already holding B's version accept the merge
+      expect(r.needsPush, isTrue);
       expect(DateTime.parse(r.record['updated_at'] as String), now);
     });
 
@@ -86,8 +85,8 @@ void main() {
       );
       final r =
       ConflictResolver.merge(local: deletedLocally, remote: editedRemotely, now: now);
-      expect(r.record['deleted_at'], t12); // tombstone survives
-      expect(r.record['amount'], 99); // remote edit still merged
+      expect(r.record['deleted_at'], t12);
+      expect(r.record['amount'], 99);
 
       final restoredRemotely = rec(
         updated: '2026-07-01T12:30:00.000Z',

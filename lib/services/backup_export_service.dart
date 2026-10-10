@@ -1,4 +1,3 @@
-// lib/services/backup_export_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:drift/drift.dart';
@@ -42,9 +41,6 @@ class BackupExportService {
     return null;
   }
 
-  // =========================================================================
-  // 1. JSON BACKUP EXPORT
-  // =========================================================================
   Future<String> exportJsonBackup() async {
     final txns = await _db.select(_db.transactions).get();
     final accs = await _db.select(_db.accounts).get();
@@ -56,7 +52,7 @@ class BackupExportService {
     final prefs = await SharedPreferences.getInstance();
     final settings = <String, dynamic>{};
     for (final key in prefs.getKeys()) {
-      if (key.startsWith('budget_')) continue; // legacy budget keys
+      if (key.startsWith('budget_')) continue;
       settings[key] = prefs.get(key);
     }
 
@@ -163,11 +159,6 @@ class BackupExportService {
     return file.path;
   }
 
-  // =========================================================================
-  // 2. JSON BACKUP RESTORE
-  // Everything is validated and parsed BEFORE the database is touched.
-  // Returns a short summary. Throws FormatException on any invalid data.
-  // =========================================================================
   Future<String> restoreJsonBackup(String jsonContent) async {
     dynamic decoded;
     try {
@@ -212,7 +203,6 @@ class BackupExportService {
     final now = DateTime.now().toUtc();
     const uuid = Uuid();
 
-    // ---- accounts
     final accountRows = <AccountsCompanion>[];
     final accountIds = <String>{};
     final nameToId = <String, String>{};
@@ -241,7 +231,6 @@ class BackupExportService {
       ));
     }
 
-    // ---- categories
     final categoryRows = <CategoriesCompanion>[];
     final catJson = list('categories');
     for (var i = 0; i < catJson.length; i++) {
@@ -266,7 +255,6 @@ class BackupExportService {
       ));
     }
 
-    // ---- transactions
     final txnRows = <TransactionsCompanion>[];
     final txnJson = list('transactions');
     for (var i = 0; i < txnJson.length; i++) {
@@ -287,7 +275,6 @@ class BackupExportService {
         throw FormatException(
             'Transaction #${i + 1} is missing a field or has an invalid value.');
       }
-      // Older backups stored the account name instead of its id.
       final accId = accountIds.contains(accRaw) ? accRaw : nameToId[accRaw];
       if (accId == null) {
         throw FormatException(
@@ -309,14 +296,12 @@ class BackupExportService {
         createdAt: Value(_dt(t['createdAt']) ?? now),
         updatedAt: Value(now),
         deletedAt: Value(deleted),
-        // Pending, so the next sync pushes the restored data to the cloud.
         syncStatus: Value(deleted != null
             ? SyncStatus.pendingDelete
             : SyncStatus.pendingCreate),
       ));
     }
 
-    // ---- budgets (supports the old {year, month, amount} shape)
     final budgetRows = <BudgetsCompanion>[];
     final budJson = list('budgets');
     for (var i = 0; i < budJson.length; i++) {
@@ -342,7 +327,6 @@ class BackupExportService {
       ));
     }
 
-    // ---- goals
     final goalRows = <SavingsGoalsCompanion>[];
     final goalJson = list('goals');
     for (var i = 0; i < goalJson.length; i++) {
@@ -369,7 +353,6 @@ class BackupExportService {
       ));
     }
 
-    // ---- recurring
     final recurringRows = <RecurringTransactionsCompanion>[];
     final recJson = list('recurring');
     for (var i = 0; i < recJson.length; i++) {
@@ -415,7 +398,6 @@ class BackupExportService {
       ));
     }
 
-    // ---- validation passed: now write, atomically
     await _db.replaceAllData(
       accountRows: accountRows,
       categoryRows: categoryRows,
@@ -455,10 +437,6 @@ class BackupExportService {
         '${goalRows.length} goals';
   }
 
-  // =========================================================================
-  // 3. FILTERED CSV EXPORT
-  // Format: Date,Type,Category,Account,Amount,Note
-  // =========================================================================
   Future<String> exportFilteredTransactionsCsv({
     int? month,
     int? year,

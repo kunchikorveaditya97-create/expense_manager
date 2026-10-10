@@ -28,7 +28,6 @@ class GoalProvider extends ChangeNotifier {
     await load();
   }
 
-  /// Negative delta withdraws.
   Future<void> addFunds(String id, double delta) async {
     await _db.adjustGoalAmount(id, delta);
     await load();

@@ -1,14 +1,8 @@
-// lib/sync/sync_remote.dart
-//
-// The only file that talks to Firestore. SyncService depends on the abstract
-// SyncRemote, so tests can plug in an in-memory fake.
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Thrown when the cloud cannot be reached (offline, timeout, unavailable).
-/// SyncService aborts the run and keeps all pending rows untouched.
 class SyncOfflineException implements Exception {
   SyncOfflineException([this.cause]);
   final Object? cause;
@@ -20,18 +14,15 @@ class RemoteBatch {
   const RemoteBatch(this.docs, this.maxSyncedAt);
   final List<Map<String, dynamic>> docs;
 
-  /// Largest server-side `synced_at` in [docs]; used as the next cursor.
   final DateTime? maxSyncedAt;
 }
 
 abstract class SyncRemote {
-  /// uid of the signed-in (non-anonymous) user, or null when local-only.
   String? get userId;
   Stream<String?> get userIdChanges;
 
   Future<void> upsert(String collection, String id, Map<String, dynamic> data);
 
-  /// Documents whose server `synced_at` is after [since] (all when null).
   Future<RemoteBatch> fetchChangedSince(String collection, DateTime? since);
 }
 
@@ -47,7 +38,6 @@ class FirestoreSyncRemote implements SyncRemote {
   final FirebaseAuth? _auth;
   final Duration timeout;
 
-  // Lazy so the app still starts if Firebase failed to initialise.
   FirebaseFirestore get _fs => _firestore ?? FirebaseFirestore.instance;
   FirebaseAuth get _fa => _auth ?? FirebaseAuth.instance;
 
@@ -77,8 +67,6 @@ class FirestoreSyncRemote implements SyncRemote {
     }
   }
 
-  /// users/{uid}/{collection}. Security rules must restrict this subtree to
-  /// request.auth.uid == uid (see SYNC_STRATEGY.md).
   CollectionReference<Map<String, dynamic>> _col(String uid, String name) =>
       _fs.collection('users').doc(uid).collection(name);
 
@@ -104,15 +92,12 @@ class FirestoreSyncRemote implements SyncRemote {
     final uid = _requireUid();
     final base = _col(uid, collection);
 
-    // First sync: plain fetch (also returns old docs that lack synced_at).
-    // Later syncs: delta by the server-assigned timestamp, not device clocks.
     final Query<Map<String, dynamic>> query = since == null
         ? base
         : base
         .where('synced_at', isGreaterThan: Timestamp.fromDate(since))
         .orderBy('synced_at');
 
-    // Source.server: offline must fail fast instead of silently returning cache.
     final snap =
     await _guard(() => query.get(const GetOptions(source: Source.server)));
 

@@ -171,7 +171,7 @@ class _CategorySheetState extends State<_CategorySheet> {
           const SizedBox(height: 16),
           TextField(
             controller: _name,
-            enabled: !editing, // name is the key stored on transactions
+            enabled: !editing,
             decoration: InputDecoration(
               labelText: 'Name',
               border: const OutlineInputBorder(),

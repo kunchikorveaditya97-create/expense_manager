@@ -1,4 +1,3 @@
-// lib/features/budget/budget_card.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -112,7 +111,6 @@ class MonthlyBudgetCard extends StatelessWidget {
                 label: const Text('Set Monthly Budget'),
               ),
             ] else ...[
-              // Progress Bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
@@ -124,7 +122,6 @@ class MonthlyBudgetCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // Summary Breakdown
               Wrap(
                 spacing: 16,
                 runSpacing: 8,
@@ -146,7 +143,6 @@ class MonthlyBudgetCard extends StatelessWidget {
                 ],
               ),
 
-              // Threshold Milestone Alerts
               if (warning != null) ...[
                 const SizedBox(height: 12),
                 Container(

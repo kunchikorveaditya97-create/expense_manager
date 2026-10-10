@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Icons are stored by key (not code point) so release builds can tree-shake icon fonts.
 const Map<String, IconData> categoryIcons = {
   'restaurant': Icons.restaurant,
   'flight': Icons.flight,

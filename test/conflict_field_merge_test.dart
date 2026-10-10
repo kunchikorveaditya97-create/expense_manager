@@ -30,14 +30,12 @@ Map<String, dynamic> rec({
 void main() {
   group('ConflictResolver.merge (field level)', () {
     test('different fields changed on each device: both changes survive', () {
-      // Device A (local) edited the note at t2.
       final local = rec(
         amount: 20,
         note: 'lunch with team',
         updatedAt: t2,
         stamps: {'amount': t0, 'note': t2},
       );
-      // Device B (remote) edited the amount at t1.
       final remote = rec(
         amount: 30,
         note: 'lunch',
@@ -51,9 +49,9 @@ void main() {
         now: DateTime.parse('2026-07-01T13:00:00.000Z'),
       );
 
-      expect(r.record['amount'], 30); // remote's change kept
-      expect(r.record['note'], 'lunch with team'); // local's change kept
-      expect(r.needsPush, isTrue); // local contributed, so upload the merge
+      expect(r.record['amount'], 30);
+      expect(r.record['note'], 'lunch with team');
+      expect(r.needsPush, isTrue);
     });
 
     test('same field changed on both sides: last write wins (local newer)', () {
@@ -78,7 +76,7 @@ void main() {
           final r = ConflictResolver.merge(local: local, remote: remote);
 
           expect(r.record['amount'], 30);
-          expect(r.needsPush, isFalse); // nothing local to upload
+          expect(r.needsPush, isFalse);
         });
 
     test('identical records need no push', () {
@@ -119,8 +117,8 @@ void main() {
 
       final r = ConflictResolver.merge(local: local, remote: remote);
 
-      expect(r.record['deleted_at'], t2); // delete wins (newer)
-      expect(r.record['note'], 'lunch edited'); // remote edit kept
+      expect(r.record['deleted_at'], t2);
+      expect(r.record['note'], 'lunch edited');
       expect(r.needsPush, isTrue);
     });
 

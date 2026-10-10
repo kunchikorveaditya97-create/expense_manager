@@ -43,7 +43,6 @@ class RecurringProcessor {
     for (final item in due) {
       var next = item.nextExecutionDate;
 
-      // Catch up on every missed occurrence, not just one.
       while (!next.isAfter(now)) {
         await _db.into(_db.transactions).insert(
           TransactionsCompanion.insert(

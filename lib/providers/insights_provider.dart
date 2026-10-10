@@ -1,4 +1,3 @@
-// lib/providers/insights_provider.dart
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
@@ -12,7 +11,6 @@ class InsightsProvider extends ChangeNotifier {
   List<String> _insights = [];
   String Function(double) formatAmount = (v) => v.toStringAsFixed(0);
 
-  /// [clock] exists so tests can pin "now"; the app uses the real time.
   InsightsProvider(this._db, {DateTime Function()? clock})
       : _clock = clock ?? DateTime.now {
     generateInsights();
@@ -25,8 +23,6 @@ class InsightsProvider extends ChangeNotifier {
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     final list = <String>[];
 
-    // 1. Week over week: this week so far vs the SAME days of last week
-    //    (Mon..today), so early in the week the comparison is fair.
     final thisWeekStart =
     DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final lastWeekStart = DateTime(
@@ -48,7 +44,6 @@ class InsightsProvider extends ChangeNotifier {
       }
     }
 
-    // 2. Month over month: this month so far vs the same days of last month.
     final firstThisMonth = DateTime(now.year, now.month, 1);
     final firstLastMonth = DateTime(now.year, now.month - 1, 1);
     final lastMonthLength = DateTime(now.year, now.month, 0).day;
@@ -69,14 +64,12 @@ class InsightsProvider extends ChangeNotifier {
       }
     }
 
-    // 3. Average daily spending this month.
     if (thisMonthSpent > 0) {
       final dailyAvg = thisMonthSpent / now.day;
       list.add(
           'Your average daily spending this month is ${formatAmount(dailyAvg)}.');
     }
 
-    // 4. Top expense category this month.
     final topCategory = await _topExpenseCategory(firstThisMonth, tomorrow);
     if (topCategory != null && topCategory.isNotEmpty) {
       list.add('$topCategory is your highest expense category this month.');
@@ -86,7 +79,6 @@ class InsightsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sum of expenses in [start, end).
   Future<double> _expensesBetween(DateTime start, DateTime end) async {
     final amountSum = _db.transactions.amount.sum();
     final query = _db.selectOnly(_db.transactions)

@@ -58,9 +58,6 @@ class TransactionRepositoryImpl implements ITransactionRepository {
     final now =
     companion.updatedAt.present ? companion.updatedAt.value : DateTime.now().toUtc();
 
-    // Only fields whose value really changed get a new timestamp; that is
-    // what lets a note edit on one device and an amount edit on another
-    // both survive a sync.
     final c = companion;
     final changed = <String>[
       if (c.amount.present && c.amount.value != old.amount) 'amount',
@@ -99,8 +96,6 @@ class TransactionRepositoryImpl implements ITransactionRepository {
     return (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(
       TransactionsCompanion(
         deletedAt: Value(now),
-        // updatedAt must move too: sync uses it to detect newer versions and
-        // to avoid marking a row synced after it changed mid-upload.
         updatedAt: Value(now),
         fieldTimestamps: Value(FieldTimestamps.touch(
           old.fieldTimestamps,

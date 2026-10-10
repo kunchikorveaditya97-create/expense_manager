@@ -1,4 +1,3 @@
-// lib/data/repositories/budget_repository.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import '../local/app_database.dart';
 import '../local/tables.dart';
@@ -32,7 +31,6 @@ class BudgetRepositoryImpl implements IBudgetRepository {
   Future<double> getMonthlyBudget(int month, int year) async {
     final fromDb = await _db.getBudgetLimit('ALL', month, year);
     if (fromDb != null) return fromDb;
-    // Fallback for budgets saved before they moved into the database.
     final prefs = await SharedPreferences.getInstance();
     return prefs.getDouble(_legacyKey(month, year)) ?? 0.0;
   }

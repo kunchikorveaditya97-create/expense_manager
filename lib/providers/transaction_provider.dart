@@ -65,7 +65,8 @@ class TransactionProvider extends ChangeNotifier {
     for (final a in _accounts) {
       if (a.id == idOrName) return a.name;
     }
-    return idOrName; // old transactions still hold the name
+    final looksLikeId = idOrName.length >= 30 && idOrName.contains('-');
+    return looksLikeId ? 'Unknown account' : idOrName;
   }
 
   double get totalIncome => _hasAccounts ? _totalIncome : 0.0;
@@ -126,7 +127,7 @@ class TransactionProvider extends ChangeNotifier {
         maxAmount: _filterMax,
         searchQuery: _searchQuery,
       );
-      if (gen != _generation) return; // a newer refreshAll started; drop this one
+      if (gen != _generation) return;
 
       if (fetched.length < _limit) _hasMore = false;
       final seen = _transactions.map((t) => t.id).toSet();

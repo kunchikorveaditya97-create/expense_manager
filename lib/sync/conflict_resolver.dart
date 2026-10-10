@@ -1,22 +1,10 @@
-// lib/sync/conflict_resolver.dart
-//
-// Field-level merge for synced records. Pure Dart (no Flutter / Firebase /
-// Drift imports) so it is trivially unit-testable.
-//
-// Records are plain maps in the *cloud* format (snake_case keys, ISO-8601
-// strings for dates). Every record may carry `field_timestamps`:
-//   { "amount": "2026-07-01T10:00:00.000Z", "note": "...", ... }
-// i.e. the last time each field was changed on the device that changed it.
 import 'dart:convert';
 
 class MergeResult {
   const MergeResult(this.record, this.needsPush);
 
-  /// The merged record, cloud format (field_timestamps is a Map).
   final Map<String, dynamic> record;
 
-  /// True when at least one field value came from the local side and differs
-  /// from the remote, so the merged record must be uploaded.
   final bool needsPush;
 }
 
@@ -51,22 +39,6 @@ class ConflictResolver {
   DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   static final RegExp _isoLike = RegExp(r'^\d{4}-\d{2}-\d{2}T');
 
-  /// Merges [local] and [remote] one field at a time.
-  ///
-  /// * A field changed on only one side keeps that side's value (that side's
-  ///   per-field timestamp is the newest, because the other side's timestamp
-  ///   is still the old baseline).
-  /// * A field changed on both sides falls back to Last-Write-Wins using the
-  ///   per-field timestamp, then the record's `updated_at`, then a
-  ///   deterministic value comparison, so every device converges on the same
-  ///   result regardless of which side calls it "local".
-  /// * Records without `field_timestamps` (legacy rows, accounts, goals) use
-  ///   the record `updated_at` as the timestamp for every field, which makes
-  ///   the merge degrade to plain whole-record LWW.
-  ///
-  /// When the local side contributes a value, `updated_at` is bumped to [now]
-  /// so other devices that already hold the remote version will accept the
-  /// merged one.
   static MergeResult merge({
     required Map<String, dynamic> local,
     required Map<String, dynamic> remote,
@@ -121,7 +93,6 @@ class ConflictResolver {
     if (byField != 0) return byField > 0;
     final byRecord = lu.compareTo(ru);
     if (byRecord != 0) return byRecord > 0;
-    // Exact tie: pick by value so both devices choose the same winner.
     return '$lv'.compareTo('$rv') > 0;
   }
 
@@ -154,20 +125,15 @@ class ConflictResolver {
   }
 }
 
-/// Builds the JSON stored in `Transactions.fieldTimestamps`.
 class FieldTimestamps {
   FieldTimestamps._();
 
-  /// All fields stamped with the creation time.
   static String forCreate(DateTime at,
       {List<String> fields = ConflictResolver.transactionFields}) {
     final iso = at.toUtc().toIso8601String();
     return jsonEncode({for (final f in fields) f: iso});
   }
 
-  /// Stamps only [changed] fields with [now]. Every other field keeps its
-  /// existing stamp, or [baseline] (the row's previous `updatedAt`) when it
-  /// has none yet, so an edit to one field never makes the rest look new.
   static String touch(
       String? existingJson,
       Iterable<String> changed,

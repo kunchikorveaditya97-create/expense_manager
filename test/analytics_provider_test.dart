@@ -26,7 +26,6 @@ void main() {
     return p;
   }
 
-  /// Today: 100 Food + 50 Travel expenses and 1000 income.
   Future<void> seedToday() async {
     await addTxn(db, amount: 100, category: 'Food', date: daysAgo(0));
     await addTxn(db, amount: 50, category: 'Travel', date: daysAgo(0));
@@ -68,7 +67,7 @@ void main() {
 
     test('transactions outside the period are excluded', () async {
       await seedToday();
-      await addTxn(db, amount: 777, date: daysAgo(800)); // ~2 years ago
+      await addTxn(db, amount: 777, date: daysAgo(800));
 
       final p = await load(AnalyticsPeriod.year);
 
@@ -107,8 +106,8 @@ void main() {
       final p = await load(AnalyticsPeriod.week);
 
       expect(p.trend.length, 7);
-      expect(p.trend[6].expense, 150); // today
-      expect(p.trend[3].expense, 40); // three days ago
+      expect(p.trend[6].expense, 150);
+      expect(p.trend[3].expense, 40);
       expect(p.expense, 190);
       expect(trendTotal(p), 190);
     });

@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/sync_status_badge.dart
 import 'package:expense_manager/sync/sync_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +23,6 @@ class SyncStatusBadge extends StatelessWidget {
       message: p.label,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        // Tap to retry (no-op while a sync is running).
         onTap: p.isSyncing ? null : () => context.read<SyncProvider>().syncAll(),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 200),

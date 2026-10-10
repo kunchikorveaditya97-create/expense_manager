@@ -1,4 +1,3 @@
-// lib/sync/sync_service.dart
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -37,12 +36,6 @@ class _Counts {
   int failed = 0;
 }
 
-/// Local <-> cloud synchronisation.
-///
-/// Order matters: **pull first, then push.** Pulling first merges remote edits
-/// into pending local rows (field by field), so the push uploads the merged
-/// result instead of blindly overwriting another device's changes.
-/// Accounts go first so transactions never reference a missing account.
 class SyncService {
   SyncService(this._db, this._remote) : queue = SyncQueue(_db);
 
@@ -57,7 +50,6 @@ class SyncService {
   Future<int> getPendingChangesCount() => queue.pendingCount();
   Future<int> getFailedCount() => queue.failedCount();
 
-  // ---------------------------------------------------------------- run ---
 
   Future<SyncResult> sync() async {
     final uid = _remote.userId;
@@ -92,7 +84,6 @@ class SyncService {
     }
   }
 
-  // --------------------------------------------------------------- pull ---
 
   Future<void> _pull(
       String uid,
@@ -113,13 +104,11 @@ class SyncService {
         debugPrint('Sync: could not apply $collection/${doc['id']}: $e');
       }
     }
-    // Only advance the cursor when everything applied, so failures are retried.
     if (clean && batch.maxSyncedAt != null) {
       await _saveCursor(uid, collection, batch.maxSyncedAt!);
     }
   }
 
-  /// Shared apply logic. Returns true when the local row changed.
   Future<bool> _applyRemote<T>({
     required Map<String, dynamic> remote,
     required Future<T?> Function(String id) findLocal,
@@ -133,13 +122,11 @@ class SyncService {
     final id = remote['id'] as String;
     final local = await findLocal(id);
 
-    // New to this device (includes tombstones, so deletes propagate).
     if (local == null) {
       await write(remote, SyncStatus.synced);
       return true;
     }
 
-    // Local copy is clean: take the remote version only if it is newer.
     if (statusOf(local) == SyncStatus.synced) {
       final rUpdated = ConflictResolver.parseTime(remote['updated_at']);
       if (rUpdated == null || !rUpdated.isAfter(updatedAtOf(local).toUtc())) {
@@ -149,8 +136,6 @@ class SyncService {
       return true;
     }
 
-    // Both sides changed: field-level merge. If local contributed anything the
-    // row stays pending so the merged result is uploaded.
     final r = ConflictResolver.merge(
         local: toMap(local), remote: remote, fields: fields);
     await write(r.record,
@@ -197,7 +182,6 @@ class SyncService {
         write: (data, status) => _writeGoal(uid, data, status),
       );
 
-  // --------------------------------------------------------------- push ---
 
   Future<void> _push<T>({
     required String collection,
@@ -214,9 +198,8 @@ class SyncService {
         await markSynced(row);
         counts.pushed++;
       } on SyncOfflineException {
-        rethrow; // stop the run; every remaining row stays pending
+        rethrow;
       } catch (e) {
-        // One bad record must not block the others.
         debugPrint('Sync: push failed for $collection/${idOf(row)}: $e');
         await markFailed(row);
         counts.failed++;
@@ -224,8 +207,6 @@ class SyncService {
     }
   }
 
-  // markSynced only matches if updatedAt is unchanged, so an edit made while
-  // the upload was in flight stays pending instead of being marked synced.
 
   Future<void> _pushTransactions(String uid, _Counts c) async => _push<Transaction>(
     collection: 'transactions',
@@ -273,7 +254,6 @@ class SyncService {
     counts: c,
   );
 
-  // ----------------------------------------------------------- mappers ---
 
   String? _iso(DateTime? d) => d?.toUtc().toIso8601String();
 
@@ -336,7 +316,6 @@ class SyncService {
   DateTime _time(dynamic v, {DateTime? or}) =>
       ConflictResolver.parseTime(v) ?? or ?? DateTime.now().toUtc();
 
-  // Upserts so the same code path handles insert and update.
 
   Future<void> _writeTransaction(
       String uid, Map<String, dynamic> m, SyncStatus status) =>
@@ -388,10 +367,7 @@ class SyncService {
         syncStatus: Value(status),
       ));
 
-  // --------------------------------------------------- housekeeping/state ---
 
-  /// Soft-deleted transactions that are fully synced and older than 30 days
-  /// are removed locally. The cloud keeps its tombstone for other devices.
   Future<void> _purgeTombstones() async {
     final cutoff = DateTime.now().toUtc().subtract(const Duration(days: 30));
     await (_db.delete(_db.transactions)
@@ -417,7 +393,6 @@ class SyncService {
     await p.setInt(_cursorKey(uid, collection), at.microsecondsSinceEpoch);
   }
 
-  /// Time of the last fully successful sync for the current user.
   Future<DateTime?> lastSyncAt() async {
     final uid = _remote.userId;
     if (uid == null) return null;
@@ -428,7 +403,6 @@ class SyncService {
         : DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
   }
 
-  /// Call after "Reset local data" so the next sync re-downloads everything.
   Future<void> resetSyncState() async {
     final p = await SharedPreferences.getInstance();
     for (final k in p.getKeys().where((k) => k.startsWith('sync_')).toList()) {

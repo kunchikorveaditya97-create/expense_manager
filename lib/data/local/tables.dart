@@ -1,4 +1,3 @@
-// lib/data/local/tables.dart
 import 'package:drift/drift.dart';
 
 enum TransactionType { income, expense }
@@ -30,7 +29,7 @@ class Accounts extends Table {
   TextColumn get id => text()();
   TextColumn get userId => text()();
   TextColumn get name => text()();
-  TextColumn get type => text()(); // cash, bank, credit_card, savings
+  TextColumn get type => text()();
   RealColumn get initialBalance => real().withDefault(const Constant(0.0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -43,7 +42,7 @@ class Accounts extends Table {
 
 class Budgets extends Table {
   TextColumn get id => text()();
-  TextColumn get categoryId => text()(); // 'ALL' or specific category name
+  TextColumn get categoryId => text()();
   RealColumn get limitAmount => real()();
   IntColumn get month => integer()();
   IntColumn get year => integer()();
@@ -78,7 +77,7 @@ class RecurringTransactions extends Table {
   TextColumn get categoryId => text()();
   TextColumn get accountId => text()();
   TextColumn get note => text().nullable()();
-  TextColumn get frequency => text()(); // daily, weekly, monthly, yearly
+  TextColumn get frequency => text()();
   DateTimeColumn get nextExecutionDate => dateTime()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime()();

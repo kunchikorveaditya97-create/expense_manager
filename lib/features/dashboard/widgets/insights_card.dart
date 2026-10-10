@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/insights_card.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +10,6 @@ class InsightsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final insights = context.watch<InsightsProvider>().insights;
 
-    // Nothing to show yet (not enough spending data), so hide the card
     if (insights.isEmpty) return const SizedBox.shrink();
 
     return Card(
