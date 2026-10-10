@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import '../../sync/conflict_resolver.dart';
 import '../local/app_database.dart';
 import '../local/tables.dart';
 
@@ -33,36 +34,101 @@ class TransactionRepositoryImpl implements ITransactionRepository {
 
   TransactionRepositoryImpl(this._db);
 
+  Future<Transaction?> _byId(String id) => (_db.select(_db.transactions)
+    ..where((t) => t.id.equals(id)))
+      .getSingleOrNull();
+
   @override
   Future<int> insertTransaction(TransactionsCompanion companion) {
-    return _db.into(_db.transactions).insert(companion);
+    final created =
+    companion.createdAt.present ? companion.createdAt.value : DateTime.now().toUtc();
+    return _db.into(_db.transactions).insert(
+      companion.copyWith(
+        fieldTimestamps: Value(FieldTimestamps.forCreate(created)),
+      ),
+    );
   }
 
   @override
   Future<bool> updateTransaction(TransactionsCompanion companion) async {
-    // Only update the fields that are present in companion, without requiring userId or createdAt
+    final id = companion.id.value;
+    final old = await _byId(id);
+    if (old == null) return false;
+
+    final now =
+    companion.updatedAt.present ? companion.updatedAt.value : DateTime.now().toUtc();
+
+    // Only fields whose value really changed get a new timestamp; that is
+    // what lets a note edit on one device and an amount edit on another
+    // both survive a sync.
+    final c = companion;
+    final changed = <String>[
+      if (c.amount.present && c.amount.value != old.amount) 'amount',
+      if (c.type.present && c.type.value != old.type) 'type',
+      if (c.categoryId.present && c.categoryId.value != old.categoryId)
+        'category_id',
+      if (c.accountId.present && c.accountId.value != old.accountId)
+        'account_id',
+      if (c.note.present && c.note.value != old.note) 'note',
+      if (c.transactionDate.present &&
+          !c.transactionDate.value.isAtSameMomentAs(old.transactionDate))
+        'transaction_date',
+    ];
+
+    final stamps = FieldTimestamps.touch(
+      old.fieldTimestamps,
+      changed,
+      now,
+      baseline: old.updatedAt,
+    );
+
     final affectedRows = await (_db.update(_db.transactions)
-      ..where((t) => t.id.equals(companion.id.value)))
-        .write(companion);
+      ..where((t) => t.id.equals(id)))
+        .write(companion.copyWith(
+      updatedAt: Value(now),
+      fieldTimestamps: Value(stamps),
+    ));
     return affectedRows > 0;
   }
 
   @override
-  Future<int> softDeleteTransaction(String id) {
+  Future<int> softDeleteTransaction(String id) async {
+    final old = await _byId(id);
+    if (old == null) return 0;
+    final now = DateTime.now().toUtc();
     return (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(
       TransactionsCompanion(
-        deletedAt: Value(DateTime.now().toUtc()),
+        deletedAt: Value(now),
+        // updatedAt must move too: sync uses it to detect newer versions and
+        // to avoid marking a row synced after it changed mid-upload.
+        updatedAt: Value(now),
+        fieldTimestamps: Value(FieldTimestamps.touch(
+          old.fieldTimestamps,
+          const ['deleted_at'],
+          now,
+          baseline: old.updatedAt,
+        )),
         syncStatus: const Value(SyncStatus.pendingDelete),
       ),
     );
   }
 
   @override
-  Future<int> restoreTransaction(String id) {
+  Future<int> restoreTransaction(String id) async {
+    final old = await _byId(id);
+    if (old == null) return 0;
+    final now = DateTime.now().toUtc();
     return (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(
-      const TransactionsCompanion(
-        deletedAt: Value(null),
-        syncStatus: Value(SyncStatus.pendingUpdate),
+      TransactionsCompanion(
+        deletedAt: const Value(null),
+        updatedAt: Value(now),
+        fieldTimestamps: Value(FieldTimestamps.touch(
+          old.fieldTimestamps,
+          const ['deleted_at'],
+          now,
+          baseline: old.updatedAt,
+        )),
+        syncStatus: const Value(SyncStatus.pendingUpdate),
       ),
     );
   }

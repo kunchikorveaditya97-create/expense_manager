@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import 'providers/theme_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'services/recurring_processor.dart';
 import 'sync/sync_provider.dart';
+import 'sync/sync_remote.dart';
 import 'sync/sync_service.dart';
 import 'providers/analytics_provider.dart';
 import 'providers/category_provider.dart';
@@ -27,6 +29,10 @@ void main() async {
 
   try {
     await Firebase.initializeApp();
+    // Our local DB is the offline cache. Firestore's own offline queue would
+    // replay stale writes behind our back and bypass the pull-then-merge step.
+    FirebaseFirestore.instance.settings =
+    const Settings(persistenceEnabled: false);
     final current = FirebaseAuth.instance.currentUser;
     if (current != null && current.isAnonymous) {
       await FirebaseAuth.instance.signOut();
@@ -38,7 +44,8 @@ void main() async {
   final database = AppDatabase();
   final transactionRepo = TransactionRepositoryImpl(database);
   final budgetRepo = BudgetRepositoryImpl(database);
-  final syncService = SyncService(database);
+  final syncService = SyncService(database, FirestoreSyncRemote());
+  final syncProvider = SyncProvider(syncService);
 
   final transactionProvider = TransactionProvider(transactionRepo);
   final budgetProvider = BudgetProvider(budgetRepo);
@@ -57,6 +64,15 @@ void main() async {
     budgetProvider.computeMonthlyBudget(now.month, now.year);
     insightsProvider.generateInsights();
     analyticsProvider.load();
+    // Local data changed: update the badge and schedule an upload.
+    syncProvider.notifyLocalChange();
+  };
+
+  // Remote changes were merged into SQLite: reload what the UI reads.
+  syncProvider.onDataPulled = () {
+    transactionProvider.refreshAll();
+    categoryProvider.load();
+    goalProvider.load();
   };
 
   runApp(
@@ -74,11 +90,14 @@ void main() async {
         ChangeNotifierProvider.value(value: categoryProvider),
         ChangeNotifierProvider.value(value: goalProvider),
         ChangeNotifierProvider.value(value: accountProvider),
-        ChangeNotifierProvider(create: (_) => SyncProvider(syncService)),
+        ChangeNotifierProvider.value(value: syncProvider),
       ],
       child: const ExpenseManagerApp(),
     ),
   );
+
+  // Start auto-sync only after the UI is up and callbacks are wired.
+  syncProvider.start();
 
   RecurringProcessor(database)
       .processDueRecurring()
