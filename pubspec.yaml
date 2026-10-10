@@ -1,0 +1,53 @@
+name: expense_manager
+description: "Encrypted personal expense manager"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.2
+
+  # Encrypted Local Database & Storage
+  drift: ^2.16.0
+  sqlite3: ^2.4.0
+  sqlcipher_flutter_libs: ^0.6.1
+  path_provider: ^2.1.2
+  path: ^1.9.0
+  flutter_secure_storage: ^9.0.0
+
+  # Utilities & Identification
+  uuid: ^4.3.3
+  intl: ^0.19.0
+  shared_preferences: ^2.2.2
+  connectivity_plus: ^6.1.0
+
+  # Security & Biometrics
+  local_auth: ^2.1.8
+
+  # Charts & Slidables
+  fl_chart: ^0.66.2
+  flutter_slidable: ^3.0.1
+
+  # Cloud & Authentication (Firebase)
+  firebase_core: ^3.1.0
+  firebase_auth: ^5.1.0
+  cloud_firestore: ^5.0.1
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  drift_dev: ^2.16.0
+  build_runner: ^2.4.9
+
+flutter:
+  uses-material-design: true
