@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../data/local/app_database.dart';
 import '../data/local/tables.dart';
@@ -14,182 +15,444 @@ class BackupExportService {
 
   BackupExportService(this._db);
 
+  static const _frequencies = {'daily', 'weekly', 'monthly', 'yearly'};
+
+  String? _iso(DateTime? d) => d?.toUtc().toIso8601String();
+
+  DateTime? _dt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+    return DateTime.tryParse(v.toString());
+  }
+
+  String? _str(dynamic v) {
+    final s = v?.toString().trim();
+    return (s == null || s.isEmpty) ? null : s;
+  }
+
+  TransactionType? _type(dynamic v) {
+    if (v is int && v >= 0 && v < TransactionType.values.length) {
+      return TransactionType.values[v];
+    }
+    if (v is String) {
+      for (final t in TransactionType.values) {
+        if (t.name == v.toLowerCase()) return t;
+      }
+    }
+    return null;
+  }
+
   // =========================================================================
   // 1. JSON BACKUP EXPORT
   // =========================================================================
   Future<String> exportJsonBackup() async {
-    final transactions = await _db.select(_db.transactions).get();
-    final accounts = await _db.select(_db.accounts).get();
+    final txns = await _db.select(_db.transactions).get();
+    final accs = await _db.select(_db.accounts).get();
+    final cats = await _db.select(_db.categories).get();
+    final buds = await _db.select(_db.budgets).get();
+    final goals = await _db.select(_db.savingsGoals).get();
+    final recs = await _db.select(_db.recurringTransactions).get();
 
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys();
-
-    final List<Map<String, dynamic>> budgets = [];
-    final Map<String, dynamic> settings = {};
-
-    for (final key in keys) {
-      if (key.startsWith('budget_')) {
-        final parts = key.split('_');
-        if (parts.length == 3) {
-          budgets.add({
-            'year': int.tryParse(parts[1]) ?? 0,
-            'month': int.tryParse(parts[2]) ?? 0,
-            'amount': prefs.getDouble(key) ?? 0.0,
-          });
-        }
-      } else {
-        settings[key] = prefs.get(key);
-      }
+    final settings = <String, dynamic>{};
+    for (final key in prefs.getKeys()) {
+      if (key.startsWith('budget_')) continue; // legacy budget keys
+      settings[key] = prefs.get(key);
     }
 
-    final backupPayload = {
-      "version": 1,
-      "exportedAt": DateTime.now().toIso8601String(),
-      "transactions": transactions.map((t) => t.toJson()).toList(),
-      "categories": [],
-      "accounts": accounts.map((a) => a.toJson()).toList(),
-      "budgets": budgets,
-      "goals": [],
-      "settings": settings,
+    final payload = {
+      'version': 1,
+      'exportedAt': _iso(DateTime.now()),
+      'transactions': [
+        for (final t in txns)
+          {
+            'id': t.id,
+            'userId': t.userId,
+            'amount': t.amount,
+            'type': t.type.name,
+            'categoryId': t.categoryId,
+            'accountId': t.accountId,
+            'note': t.note,
+            'transactionDate': _iso(t.transactionDate),
+            'attachmentPath': t.attachmentPath,
+            'isRecurring': t.isRecurring,
+            'currency': t.currency,
+            'createdAt': _iso(t.createdAt),
+            'updatedAt': _iso(t.updatedAt),
+            'deletedAt': _iso(t.deletedAt),
+          }
+      ],
+      'categories': [
+        for (final c in cats)
+          {
+            'id': c.id,
+            'userId': c.userId,
+            'name': c.name,
+            'type': c.type.name,
+            'iconName': c.iconName,
+            'colorValue': c.colorValue,
+            'isArchived': c.isArchived,
+            'isCustom': c.isCustom,
+            'createdAt': _iso(c.createdAt),
+          }
+      ],
+      'accounts': [
+        for (final a in accs)
+          {
+            'id': a.id,
+            'userId': a.userId,
+            'name': a.name,
+            'type': a.type,
+            'initialBalance': a.initialBalance,
+            'createdAt': _iso(a.createdAt),
+            'updatedAt': _iso(a.updatedAt),
+            'deletedAt': _iso(a.deletedAt),
+          }
+      ],
+      'budgets': [
+        for (final b in buds)
+          {
+            'id': b.id,
+            'categoryId': b.categoryId,
+            'limitAmount': b.limitAmount,
+            'month': b.month,
+            'year': b.year,
+          }
+      ],
+      'goals': [
+        for (final g in goals)
+          {
+            'id': g.id,
+            'userId': g.userId,
+            'name': g.name,
+            'targetAmount': g.targetAmount,
+            'currentAmount': g.currentAmount,
+            'targetDate': _iso(g.targetDate),
+            'iconName': g.iconName,
+            'createdAt': _iso(g.createdAt),
+            'updatedAt': _iso(g.updatedAt),
+            'deletedAt': _iso(g.deletedAt),
+          }
+      ],
+      'recurring': [
+        for (final r in recs)
+          {
+            'id': r.id,
+            'userId': r.userId,
+            'amount': r.amount,
+            'type': r.type.name,
+            'categoryId': r.categoryId,
+            'accountId': r.accountId,
+            'note': r.note,
+            'frequency': r.frequency,
+            'nextExecutionDate': _iso(r.nextExecutionDate),
+            'isActive': r.isActive,
+            'createdAt': _iso(r.createdAt),
+            'updatedAt': _iso(r.updatedAt),
+            'deletedAt': _iso(r.deletedAt),
+          }
+      ],
+      'settings': settings,
     };
 
-    final jsonString = const JsonEncoder.withIndent('  ').convert(backupPayload);
-
+    final jsonString = const JsonEncoder.withIndent('  ').convert(payload);
     final dir = await getApplicationDocumentsDirectory();
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     final file = File('${dir.path}/expense_manager_backup_$timestamp.json');
     await file.writeAsString(jsonString);
-
     return file.path;
   }
 
   // =========================================================================
-  // 2. JSON BACKUP RESTORE (WITH VALIDATION)
+  // 2. JSON BACKUP RESTORE
+  // Everything is validated and parsed BEFORE the database is touched.
+  // Returns a short summary. Throws FormatException on any invalid data.
   // =========================================================================
-  Future<void> restoreJsonBackup(String jsonContent) async {
-    Map<String, dynamic> payload;
+  Future<String> restoreJsonBackup(String jsonContent) async {
+    dynamic decoded;
     try {
-      final decoded = jsonDecode(jsonContent);
-      if (decoded is! Map<String, dynamic>) {
-        throw const FormatException('Invalid JSON format: root must be an object.');
-      }
-      payload = decoded;
-    } catch (e) {
-      throw FormatException('Malformed JSON file: $e');
+      decoded = jsonDecode(jsonContent);
+    } catch (_) {
+      throw const FormatException('The file is not valid JSON.');
     }
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('The root of the file must be a JSON object.');
+    }
+    final payload = decoded;
 
-    final requiredKeys = [
-      'version',
-      'transactions',
-      'categories',
-      'accounts',
-      'budgets',
-      'goals',
-      'settings'
-    ];
-    for (final key in requiredKeys) {
+    for (final key in ['version', 'transactions', 'accounts']) {
       if (!payload.containsKey(key)) {
-        throw FormatException('Validation Error: Missing required key "$key".');
+        throw FormatException('Missing required key "$key".');
       }
     }
-
-    if (payload['version'] is! int || payload['version'] != 1) {
+    if (payload['version'] != 1) {
       throw const FormatException('Unsupported backup version.');
     }
 
-    final rawTxns = payload['transactions'];
-    final rawAccs = payload['accounts'];
-    final rawBudgets = payload['budgets'];
-    final rawSettings = payload['settings'];
-
-    if (rawTxns is! List || rawAccs is! List || rawBudgets is! List || rawSettings is! Map) {
-      throw const FormatException('Validation Error: Schema type mismatch.');
+    List<Map<String, dynamic>> list(String key) {
+      final raw = payload[key];
+      if (raw == null) return [];
+      if (raw is! List) throw FormatException('"$key" must be a list.');
+      final out = <Map<String, dynamic>>[];
+      for (var i = 0; i < raw.length; i++) {
+        final item = raw[i];
+        if (item is! Map<String, dynamic>) {
+          throw FormatException('"$key" item #${i + 1} is not an object.');
+        }
+        out.add(item);
+      }
+      return out;
     }
 
-    // Atomic database restore
-    await _db.transaction(() async {
-      await _db.delete(_db.transactions).go();
-      await _db.delete(_db.accounts).go();
+    final settingsRaw = payload['settings'];
+    if (settingsRaw != null && settingsRaw is! Map) {
+      throw const FormatException('"settings" must be an object.');
+    }
 
-      // Restore accounts
-      for (final accJson in rawAccs) {
-        if (accJson is Map<String, dynamic>) {
-          await _db.into(_db.accounts).insert(
-            Account(
-              id: accJson['id']?.toString() ?? '',
-              userId: accJson['userId']?.toString() ?? 'local_user',
-              name: accJson['name']?.toString() ?? '',
-              type: accJson['type']?.toString() ?? 'regular',
-              initialBalance: (accJson['initialBalance'] as num?)?.toDouble() ??
-                  (accJson['balance'] as num?)?.toDouble() ??
-                  0.0,
-              syncStatus: SyncStatus.synced,
-              createdAt: DateTime.tryParse(accJson['createdAt']?.toString() ?? '') ?? DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-            mode: InsertMode.insertOrReplace,
-          );
-        }
+    final now = DateTime.now().toUtc();
+    const uuid = Uuid();
+
+    // ---- accounts
+    final accountRows = <AccountsCompanion>[];
+    final accountIds = <String>{};
+    final nameToId = <String, String>{};
+    final accJson = list('accounts');
+    for (var i = 0; i < accJson.length; i++) {
+      final a = accJson[i];
+      final id = _str(a['id']);
+      final name = _str(a['name']);
+      if (id == null || name == null) {
+        throw FormatException('Account #${i + 1} needs an id and a name.');
       }
+      accountIds.add(id);
+      nameToId[name] = id;
+      accountRows.add(AccountsCompanion(
+        id: Value(id),
+        userId: Value(_str(a['userId']) ?? 'default_user'),
+        name: Value(name),
+        type: Value(_str(a['type']) ?? 'cash'),
+        initialBalance: Value((a['initialBalance'] as num?)?.toDouble() ??
+            (a['balance'] as num?)?.toDouble() ??
+            0.0),
+        createdAt: Value(_dt(a['createdAt']) ?? now),
+        updatedAt: Value(_dt(a['updatedAt']) ?? now),
+        deletedAt: Value(_dt(a['deletedAt'])),
+        syncStatus: const Value(SyncStatus.synced),
+      ));
+    }
 
-      // Restore transactions
-      for (final txnJson in rawTxns) {
-        if (txnJson is Map<String, dynamic>) {
-          final typeVal = txnJson['type'];
-          TransactionType parsedType = TransactionType.expense;
-          if (typeVal is int && typeVal < TransactionType.values.length) {
-            parsedType = TransactionType.values[typeVal];
-          } else if (typeVal is String) {
-            parsedType = TransactionType.values.firstWhere(
-                  (e) => e.name.toLowerCase() == typeVal.toLowerCase(),
-              orElse: () => TransactionType.expense,
-            );
-          }
-
-          await _db.into(_db.transactions).insert(
-            Transaction(
-              id: txnJson['id']?.toString() ?? '',
-              userId: txnJson['userId']?.toString() ?? 'local_user',
-              accountId: txnJson['accountId']?.toString() ?? '',
-              categoryId: txnJson['categoryId']?.toString() ?? 'General',
-              amount: (txnJson['amount'] as num?)?.toDouble() ?? 0.0,
-              currency: txnJson['currency']?.toString() ?? 'INR',
-              type: parsedType,
-              isRecurring: (txnJson['isRecurring'] as bool?) ?? false,
-              transactionDate: DateTime.tryParse(txnJson['transactionDate']?.toString() ?? '') ?? DateTime.now(),
-              note: txnJson['note']?.toString(),
-              syncStatus: SyncStatus.synced,
-              createdAt: DateTime.tryParse(txnJson['createdAt']?.toString() ?? '') ?? DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-            mode: InsertMode.insertOrReplace,
-          );
-        }
+    // ---- categories
+    final categoryRows = <CategoriesCompanion>[];
+    final catJson = list('categories');
+    for (var i = 0; i < catJson.length; i++) {
+      final c = catJson[i];
+      final id = _str(c['id']);
+      final name = _str(c['name']);
+      final type = _type(c['type']);
+      if (id == null || name == null || type == null) {
+        throw FormatException(
+            'Category #${i + 1} needs an id, a name and a valid type.');
       }
-    });
+      categoryRows.add(CategoriesCompanion(
+        id: Value(id),
+        userId: Value(_str(c['userId']) ?? 'default_user'),
+        name: Value(name),
+        type: Value(type),
+        iconName: Value(_str(c['iconName']) ?? 'category'),
+        colorValue: Value((c['colorValue'] as num?)?.toInt()),
+        isArchived: Value(c['isArchived'] == true),
+        isCustom: Value(c['isCustom'] == true),
+        createdAt: Value(_dt(c['createdAt']) ?? now),
+      ));
+    }
 
-    // Restore budgets & settings in SharedPreferences
+    // ---- transactions
+    final txnRows = <TransactionsCompanion>[];
+    final txnJson = list('transactions');
+    for (var i = 0; i < txnJson.length; i++) {
+      final t = txnJson[i];
+      final id = _str(t['id']);
+      final type = _type(t['type']);
+      final date = _dt(t['transactionDate']);
+      final amount = t['amount'] as num?;
+      final cat = _str(t['categoryId']);
+      final accRaw = _str(t['accountId']);
+      if (id == null ||
+          type == null ||
+          date == null ||
+          amount == null ||
+          amount < 0 ||
+          cat == null ||
+          accRaw == null) {
+        throw FormatException(
+            'Transaction #${i + 1} is missing a field or has an invalid value.');
+      }
+      // Older backups stored the account name instead of its id.
+      final accId = accountIds.contains(accRaw) ? accRaw : nameToId[accRaw];
+      if (accId == null) {
+        throw FormatException(
+            'Transaction #${i + 1} references an account that is not in the backup.');
+      }
+      final deleted = _dt(t['deletedAt']);
+      txnRows.add(TransactionsCompanion(
+        id: Value(id),
+        userId: Value(_str(t['userId']) ?? 'default_user'),
+        amount: Value(amount.toDouble()),
+        type: Value(type),
+        categoryId: Value(cat),
+        accountId: Value(accId),
+        note: Value(_str(t['note'])),
+        transactionDate: Value(date),
+        attachmentPath: Value(_str(t['attachmentPath'])),
+        isRecurring: Value(t['isRecurring'] == true),
+        currency: Value(_str(t['currency']) ?? 'INR'),
+        createdAt: Value(_dt(t['createdAt']) ?? now),
+        updatedAt: Value(now),
+        deletedAt: Value(deleted),
+        // Pending, so the next sync pushes the restored data to the cloud.
+        syncStatus: Value(deleted != null
+            ? SyncStatus.pendingDelete
+            : SyncStatus.pendingCreate),
+      ));
+    }
+
+    // ---- budgets (supports the old {year, month, amount} shape)
+    final budgetRows = <BudgetsCompanion>[];
+    final budJson = list('budgets');
+    for (var i = 0; i < budJson.length; i++) {
+      final b = budJson[i];
+      final month = (b['month'] as num?)?.toInt();
+      final year = (b['year'] as num?)?.toInt();
+      final limit = (b['limitAmount'] ?? b['amount']) as num?;
+      if (month == null ||
+          month < 1 ||
+          month > 12 ||
+          year == null ||
+          limit == null ||
+          limit < 0) {
+        throw FormatException('Budget #${i + 1} has an invalid month, year or amount.');
+      }
+      budgetRows.add(BudgetsCompanion(
+        id: Value(_str(b['id']) ?? uuid.v4()),
+        categoryId: Value(_str(b['categoryId']) ?? 'ALL'),
+        limitAmount: Value(limit.toDouble()),
+        month: Value(month),
+        year: Value(year),
+        syncStatus: const Value(SyncStatus.synced),
+      ));
+    }
+
+    // ---- goals
+    final goalRows = <SavingsGoalsCompanion>[];
+    final goalJson = list('goals');
+    for (var i = 0; i < goalJson.length; i++) {
+      final g = goalJson[i];
+      final id = _str(g['id']);
+      final name = _str(g['name']);
+      final target = g['targetAmount'] as num?;
+      final date = _dt(g['targetDate']);
+      if (id == null || name == null || target == null || target <= 0 || date == null) {
+        throw FormatException('Goal #${i + 1} is missing a field or has an invalid value.');
+      }
+      goalRows.add(SavingsGoalsCompanion(
+        id: Value(id),
+        userId: Value(_str(g['userId']) ?? 'default_user'),
+        name: Value(name),
+        targetAmount: Value(target.toDouble()),
+        currentAmount: Value(((g['currentAmount'] as num?)?.toDouble() ?? 0.0)),
+        targetDate: Value(date),
+        iconName: Value(_str(g['iconName']) ?? 'savings'),
+        createdAt: Value(_dt(g['createdAt']) ?? now),
+        updatedAt: Value(now),
+        deletedAt: Value(_dt(g['deletedAt'])),
+        syncStatus: const Value(SyncStatus.synced),
+      ));
+    }
+
+    // ---- recurring
+    final recurringRows = <RecurringTransactionsCompanion>[];
+    final recJson = list('recurring');
+    for (var i = 0; i < recJson.length; i++) {
+      final r = recJson[i];
+      final id = _str(r['id']);
+      final type = _type(r['type']);
+      final amount = r['amount'] as num?;
+      final cat = _str(r['categoryId']);
+      final accRaw = _str(r['accountId']);
+      final next = _dt(r['nextExecutionDate']);
+      final freq = _str(r['frequency'])?.toLowerCase();
+      if (id == null ||
+          type == null ||
+          amount == null ||
+          cat == null ||
+          accRaw == null ||
+          next == null ||
+          freq == null ||
+          !_frequencies.contains(freq)) {
+        throw FormatException(
+            'Recurring item #${i + 1} is missing a field or has an invalid value.');
+      }
+      final accId = accountIds.contains(accRaw) ? accRaw : nameToId[accRaw];
+      if (accId == null) {
+        throw FormatException(
+            'Recurring item #${i + 1} references an account that is not in the backup.');
+      }
+      recurringRows.add(RecurringTransactionsCompanion(
+        id: Value(id),
+        userId: Value(_str(r['userId']) ?? 'default_user'),
+        amount: Value(amount.toDouble()),
+        type: Value(type),
+        categoryId: Value(cat),
+        accountId: Value(accId),
+        note: Value(_str(r['note'])),
+        frequency: Value(freq),
+        nextExecutionDate: Value(next),
+        isActive: Value(r['isActive'] != false),
+        createdAt: Value(_dt(r['createdAt']) ?? now),
+        updatedAt: Value(now),
+        deletedAt: Value(_dt(r['deletedAt'])),
+        syncStatus: const Value(SyncStatus.pendingCreate),
+      ));
+    }
+
+    // ---- validation passed: now write, atomically
+    await _db.replaceAllData(
+      accountRows: accountRows,
+      categoryRows: categoryRows,
+      transactionRows: txnRows,
+      budgetRows: budgetRows,
+      goalRows: goalRows,
+      recurringRows: recurringRows,
+    );
+
     final prefs = await SharedPreferences.getInstance();
-    for (final b in rawBudgets) {
-      if (b is Map<String, dynamic>) {
-        final year = b['year'];
-        final month = b['month'];
-        final amount = (b['amount'] as num?)?.toDouble() ?? 0.0;
-        await prefs.setDouble('budget_${year}_$month', amount);
+    final oldBudgetKeys =
+    prefs.getKeys().where((k) => k.startsWith('budget_')).toList();
+    for (final k in oldBudgetKeys) {
+      await prefs.remove(k);
+    }
+    if (settingsRaw is Map) {
+      for (final entry in settingsRaw.entries) {
+        final key = entry.key.toString();
+        final v = entry.value;
+        if (key.startsWith('budget_')) continue;
+        if (v is String) {
+          await prefs.setString(key, v);
+        } else if (v is bool) {
+          await prefs.setBool(key, v);
+        } else if (v is int) {
+          await prefs.setInt(key, v);
+        } else if (v is double) {
+          await prefs.setDouble(key, v);
+        } else if (v is List && v.every((e) => e is String)) {
+          await prefs.setStringList(key, v.cast<String>());
+        }
       }
     }
 
-    for (final entry in rawSettings.entries) {
-      if (entry.value is String) {
-        await prefs.setString(entry.key, entry.value as String);
-      } else if (entry.value is bool) {
-        await prefs.setBool(entry.key, entry.value as bool);
-      } else if (entry.value is double) {
-        await prefs.setDouble(entry.key, entry.value as double);
-      } else if (entry.value is int) {
-        await prefs.setInt(entry.key, entry.value as int);
-      }
-    }
+    return '${txnRows.length} transactions, ${accountRows.length} accounts, '
+        '${categoryRows.length} categories, ${budgetRows.length} budgets, '
+        '${goalRows.length} goals';
   }
 
   // =========================================================================
@@ -210,11 +473,11 @@ class BackupExportService {
       ..where((t) => t.deletedAt.isNull());
 
     if (month != null && year != null) {
-      final start = DateTime.utc(year, month, 1);
-      final end = DateTime.utc(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
+      final start = DateTime(year, month, 1);
+      final end = DateTime(year, month + 1, 1);
       query.where((t) =>
       t.transactionDate.isBiggerOrEqualValue(start) &
-      t.transactionDate.isSmallerOrEqualValue(end));
+      t.transactionDate.isSmallerThanValue(end));
     }
 
     if (type != null) {
@@ -241,7 +504,7 @@ class BackupExportService {
       final dateStr = dateFormat.format(txn.transactionDate);
       final typeStr = txn.type == TransactionType.income ? 'Income' : 'Expense';
       final catStr = _escapeCsv(txn.categoryId);
-      final accStr = _escapeCsv(accNameMap[txn.accountId] ?? 'Default');
+      final accStr = _escapeCsv(accNameMap[txn.accountId] ?? txn.accountId);
       final amountStr = txn.amount.toStringAsFixed(2);
       final noteStr = _escapeCsv(txn.note ?? '');
 

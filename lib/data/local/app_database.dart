@@ -431,6 +431,39 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Replaces everything in one transaction. Callers validate first.
+  Future<void> replaceAllData({
+    required List<AccountsCompanion> accountRows,
+    required List<CategoriesCompanion> categoryRows,
+    required List<TransactionsCompanion> transactionRows,
+    required List<BudgetsCompanion> budgetRows,
+    required List<SavingsGoalsCompanion> goalRows,
+    required List<RecurringTransactionsCompanion> recurringRows,
+  }) async {
+    await transaction(() async {
+      await delete(transactions).go();
+      await delete(accounts).go();
+      await delete(categories).go();
+      await delete(budgets).go();
+      await delete(savingsGoals).go();
+      await delete(recurringTransactions).go();
+
+      await batch((b) {
+        b.insertAll(accounts, accountRows, mode: InsertMode.insertOrReplace);
+        b.insertAll(categories, categoryRows, mode: InsertMode.insertOrReplace);
+        b.insertAll(transactions, transactionRows,
+            mode: InsertMode.insertOrReplace);
+        b.insertAll(budgets, budgetRows, mode: InsertMode.insertOrReplace);
+        b.insertAll(savingsGoals, goalRows, mode: InsertMode.insertOrReplace);
+        b.insertAll(recurringTransactions, recurringRows,
+            mode: InsertMode.insertOrReplace);
+      });
+
+      if (accountRows.isEmpty) await _seedDefaultAccounts();
+      if (categoryRows.isEmpty) await _seedDefaultCategories();
+    });
+  }
+
   Future<Map<String, double>> _sumByAccount(TransactionType type) async {
     final amountSum = transactions.amount.sum();
     final query = selectOnly(transactions)

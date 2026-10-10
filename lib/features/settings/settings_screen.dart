@@ -15,6 +15,8 @@ import '../accounts/manage_accounts_screen.dart';
 import '../categories/manage_categories_screen.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/goal_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -255,9 +257,8 @@ class SettingsScreen extends StatelessWidget {
                   Navigator.pop(ctx);
                   try {
                     final path = await backupService.exportJsonBackup();
-                    if (context.mounted) {
-                      _showSnackBar(context, 'Backup saved: $path');
-                    }
+                    await Share.shareXFiles([XFile(path)],
+                        text: 'Expense Manager backup');
                   } catch (e) {
                     if (context.mounted) _showSnackBar(context, 'Export failed: $e');
                   }
@@ -346,7 +347,8 @@ class SettingsScreen extends StatelessWidget {
                     year: selectedYear,
                     type: selectedType,
                   );
-                  if (context.mounted) _showSnackBar(context, 'CSV exported to: $path');
+                  await Share.shareXFiles([XFile(path)],
+                      text: 'Expense Manager CSV export');
                 } catch (e) {
                   if (context.mounted) _showSnackBar(context, 'CSV Export failed: $e');
                 }
@@ -358,62 +360,54 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showRestoreDialog(BuildContext context, BackupExportService backupService) {
-    final controller = TextEditingController();
+  Future<void> _showRestoreDialog(
+      BuildContext context, BackupExportService backupService) async {
+    final txnProvider = context.read<TransactionProvider>();
+    final budgetProvider = context.read<BudgetProvider>();
+    final categoryProvider = context.read<CategoryProvider>();
+    final goalProvider = context.read<GoalProvider>();
 
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Restore JSON Backup'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Paste raw JSON backup content or backup file path below:',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: '{"version": 1, ...}',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
+        title: const Text('Restore from backup?'),
+        content: const Text(
+          'This replaces all data on this device with the contents of the '
+              'backup file. The file is checked first; if it is invalid, nothing changes.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           FilledButton(
-            onPressed: () async {
-              final input = controller.text.trim();
-              Navigator.pop(ctx);
-              if (input.isEmpty) return;
-
-              try {
-                String content = input;
-                if (await File(input).exists()) {
-                  content = await File(input).readAsString();
-                }
-
-                await backupService.restoreJsonBackup(content);
-
-                if (context.mounted) {
-                  final now = DateTime.now();
-                  context.read<BudgetProvider>().computeMonthlyBudget(now.month, now.year);
-                  _showSnackBar(context, 'Backup restored successfully!');
-                }
-              } catch (e) {
-                if (context.mounted) _showSnackBar(context, 'Restore Failed: $e');
-              }
-            },
-            child: const Text('Validate & Restore'),
-          ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Choose file')),
         ],
       ),
     );
+    if (confirmed != true) return;
+
+    final picked = await FilePicker.platform
+        .pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+    final path = picked?.files.single.path;
+    if (path == null) return;
+
+    try {
+      final content = await File(path).readAsString();
+      final summary = await backupService.restoreJsonBackup(content);
+
+      await txnProvider.refreshAll();
+      await categoryProvider.load();
+      await goalProvider.load();
+      final now = DateTime.now();
+      await budgetProvider.computeMonthlyBudget(now.month, now.year);
+
+      if (context.mounted) _showSnackBar(context, 'Restored: $summary');
+    } on FormatException catch (e) {
+      if (context.mounted) _showSnackBar(context, 'Invalid backup: ${e.message}');
+    } catch (e) {
+      if (context.mounted) _showSnackBar(context, 'Restore failed: $e');
+    }
   }
 
   void _showSnackBar(BuildContext context, String msg) {
