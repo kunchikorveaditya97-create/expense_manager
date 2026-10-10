@@ -376,6 +376,61 @@ class AppDatabase extends _$AppDatabase {
     };
   }
 
+  Future<List<SavingsGoal>> getAllGoals() {
+    return (select(savingsGoals)
+      ..where((g) => g.deletedAt.isNull())
+      ..orderBy([(g) => OrderingTerm.asc(g.targetDate)]))
+        .get();
+  }
+
+  Future<void> insertGoal(String name, double target, double saved,
+      DateTime targetDate, String iconName) {
+    final now = DateTime.now().toUtc();
+    return into(savingsGoals).insert(SavingsGoalsCompanion.insert(
+      id: const Uuid().v4(),
+      userId: 'default_user',
+      name: name,
+      targetAmount: target,
+      currentAmount: Value(saved),
+      targetDate: targetDate,
+      iconName: iconName,
+      createdAt: now,
+      updatedAt: now,
+      syncStatus: SyncStatus.synced,
+    ));
+  }
+
+  Future<void> updateGoalDetails(String id, String name, double target,
+      DateTime targetDate, String iconName) {
+    return (update(savingsGoals)..where((g) => g.id.equals(id))).write(
+      SavingsGoalsCompanion(
+        name: Value(name),
+        targetAmount: Value(target),
+        targetDate: Value(targetDate),
+        iconName: Value(iconName),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
+  }
+
+  Future<void> adjustGoalAmount(String id, double delta) async {
+    final g = await (select(savingsGoals)..where((x) => x.id.equals(id)))
+        .getSingle();
+    final next = (g.currentAmount + delta).clamp(0.0, double.infinity).toDouble();
+    await (update(savingsGoals)..where((x) => x.id.equals(id))).write(
+      SavingsGoalsCompanion(
+        currentAmount: Value(next),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
+  }
+
+  Future<void> softDeleteGoal(String id) {
+    return (update(savingsGoals)..where((g) => g.id.equals(id))).write(
+      SavingsGoalsCompanion(deletedAt: Value(DateTime.now().toUtc())),
+    );
+  }
+
   Future<Map<String, double>> _sumByAccount(TransactionType type) async {
     final amountSum = transactions.amount.sum();
     final query = selectOnly(transactions)

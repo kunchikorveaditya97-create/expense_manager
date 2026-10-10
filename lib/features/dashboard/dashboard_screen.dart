@@ -11,6 +11,7 @@ import 'widgets/recent_transactions_card.dart';
 import 'widgets/insights_card.dart';
 import 'package:intl/intl.dart';
 import 'widgets/accounts_card.dart';
+import 'package:expense_manager/features/goals/goals_card.dart';
 import 'package:expense_manager/features/budget/category_budgets_card.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -137,6 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const MonthlyBudgetCard(),
               const CategoryBudgetsCard(),
+              const GoalsCard(),
               const AccountsCard(),
               const InsightsCard(),
               const RecentTransactionsCard(),

@@ -20,6 +20,7 @@ import 'sync/sync_service.dart';
 import 'providers/analytics_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/account_provider.dart';
+import 'providers/goal_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,7 @@ void main() async {
   final insightsProvider = InsightsProvider(database);
   final analyticsProvider = AnalyticsProvider(database);
   final categoryProvider = CategoryProvider(database);
+  final goalProvider = GoalProvider(database);
   final accountProvider = AccountProvider(database)
     ..onChanged = transactionProvider.refreshAll;
   insightsProvider.formatAmount = currencyProvider.format;
@@ -70,6 +72,7 @@ void main() async {
         ChangeNotifierProvider.value(value: insightsProvider),
         ChangeNotifierProvider.value(value: analyticsProvider),
         ChangeNotifierProvider.value(value: categoryProvider),
+        ChangeNotifierProvider.value(value: goalProvider),
         ChangeNotifierProvider.value(value: accountProvider),
         ChangeNotifierProvider(create: (_) => SyncProvider(syncService)),
       ],

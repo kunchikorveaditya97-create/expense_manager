@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/transaction_provider.dart';
 import '../accounts/manage_accounts_screen.dart';
 import '../categories/manage_categories_screen.dart';
+import '../../providers/category_provider.dart';
+import '../../providers/goal_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -182,6 +184,8 @@ class SettingsScreen extends StatelessWidget {
     final db = context.read<AppDatabase>();
     final txnProvider = context.read<TransactionProvider>();
     final budgetProvider = context.read<BudgetProvider>();
+    final categoryProvider = context.read<CategoryProvider>();
+    final goalProvider = context.read<GoalProvider>();
 
     await db.resetAllData();
 
@@ -193,6 +197,8 @@ class SettingsScreen extends StatelessWidget {
     }
 
     await txnProvider.refreshAll();
+    await categoryProvider.load();
+    await goalProvider.load();
     final now = DateTime.now();
     await budgetProvider.computeMonthlyBudget(now.month, now.year);
 
