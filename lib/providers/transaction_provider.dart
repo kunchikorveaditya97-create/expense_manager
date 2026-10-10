@@ -21,6 +21,8 @@ class TransactionProvider extends ChangeNotifier {
 
   double _totalIncome = 0.0;
   double _totalExpense = 0.0;
+  double _monthIncome = 0.0;
+  double _monthExpense = 0.0;
   bool _hasAccounts = false;
 
   TransactionType? _filterType;
@@ -39,6 +41,8 @@ class TransactionProvider extends ChangeNotifier {
   double get totalIncome => _hasAccounts ? _totalIncome : 0.0;
   double get totalExpense => _hasAccounts ? _totalExpense : 0.0;
   double get totalBalance => _hasAccounts ? (_totalIncome - _totalExpense) : 0.0;
+  double get monthIncome => _hasAccounts ? _monthIncome : 0.0;
+  double get monthExpense => _hasAccounts ? _monthExpense : 0.0;
 
   Future<void> refreshAll() async {
     _offset = 0;
@@ -56,6 +60,17 @@ class TransactionProvider extends ChangeNotifier {
     _hasAccounts = accountCount > 0;
     _totalIncome = await _repository.getTotalIncome();
     _totalExpense = await _repository.getTotalExpense();
+    final now = DateTime.now();
+    _monthIncome = await _repository.getMonthTotal(
+      TransactionType.income,
+      now.month,
+      now.year,
+    );
+    _monthExpense = await _repository.getMonthTotal(
+      TransactionType.expense,
+      now.month,
+      now.year,
+    );
     notifyListeners();
     onTransactionDataChanged?.call();
   }

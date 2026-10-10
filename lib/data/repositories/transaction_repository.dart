@@ -22,6 +22,7 @@ abstract class ITransactionRepository {
   });
   Future<double> getTotalIncome();
   Future<double> getTotalExpense();
+  Future<double> getMonthTotal(TransactionType type, int month, int year);
   Future<int> getAccountCount();
 }
 
@@ -96,6 +97,13 @@ class TransactionRepositoryImpl implements ITransactionRepository {
 
   @override
   Future<double> getTotalExpense() => _db.getTotalExpense();
+
+  @override
+  Future<double> getMonthTotal(TransactionType type, int month, int year) {
+    final start = DateTime(year, month, 1);
+    final end = DateTime(year, month + 1, 1);
+    return _db.getTotalBetween(type, start, end);
+  }
 
   @override
   Future<int> getAccountCount() => _db.getAccountCount();

@@ -9,6 +9,7 @@ import 'package:expense_manager/sync/sync_provider.dart';
 import 'widgets/sync_status_badge.dart';
 import 'widgets/recent_transactions_card.dart';
 import 'widgets/insights_card.dart';
+import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,8 +28,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final currency = context.watch<CurrencyProvider>();
 
     final balance = txnProvider.totalBalance;
-    final income = txnProvider.totalIncome;
-    final expense = txnProvider.totalExpense;
+    final income = txnProvider.monthIncome;
+    final expense = txnProvider.monthExpense;
 
     return Scaffold(
       appBar: AppBar(
@@ -101,6 +102,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       const Divider(height: 32),
+                      Text(
+                        'This month · ${DateFormat('MMMM yyyy').format(DateTime.now())}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

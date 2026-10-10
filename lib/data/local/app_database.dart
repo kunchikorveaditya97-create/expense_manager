@@ -162,6 +162,22 @@ class AppDatabase extends _$AppDatabase {
     return row.read(amountSum) ?? 0.0;
   }
 
+  Future<double> getTotalBetween(
+      TransactionType type,
+      DateTime start,
+      DateTime end,
+      ) async {
+    final amountSum = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..addColumns([amountSum])
+      ..where(transactions.type.equalsValue(type))
+      ..where(transactions.deletedAt.isNull())
+      ..where(transactions.transactionDate.isBiggerOrEqualValue(start))
+      ..where(transactions.transactionDate.isSmallerThanValue(end));
+    final row = await query.getSingle();
+    return row.read(amountSum) ?? 0.0;
+  }
+
   Future<int> getAccountCount() async {
     final countExp = accounts.id.count();
     final query = selectOnly(accounts)..addColumns([countExp]);
